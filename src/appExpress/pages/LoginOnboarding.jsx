@@ -120,7 +120,7 @@ export default function LoginOnboarding() {
               VALHALLA EXPRESS
             </h1>
             <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider mt-1">
-              POS MULTI-COMERCIO SAAS
+              POS MULTI-COMERCIO
             </p>
           </div>
         </div>

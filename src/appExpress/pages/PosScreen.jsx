@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../services/firebase';
 import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc, getDoc } from 'firebase/firestore';
-import { PauseCircle, PlayCircle, Users, CheckCircle2, Building2, Scale, X } from 'lucide-react';
+import { PauseCircle, PlayCircle, Users, CheckCircle2, Building2, Scale, X, DollarSign, Share2 } from 'lucide-react';
 import ProductScanner from '../components/ProductScanner';
 import CartSection from '../components/CartSection';
 
 export default function PosScreen() {
   const storeId = auth.currentUser ? auth.currentUser.uid : null;
+  const navigate = useNavigate();
 
-  // Estado para las sucursales y la sucursal seleccionada actualmente
   const [branches, setBranches] = useState([]);
-  const [selectedBranchId, setSelectedBranchId] = useState('main'); // 'main' representa la sucursal principal
+  const [selectedBranchId, setSelectedBranchId] = useState('main');
 
   const [allProducts, setAllProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,13 +26,11 @@ export default function PosScreen() {
   const [customersList, setCustomersList] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
 
-  // ⚖️ Estados para el Modal de Venta por Kilo / Gramos
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [weightProduct, setWeightProduct] = useState(null);
   const [weightInput, setWeightInput] = useState(''); 
-  const [weightUnit, setWeightUnit] = useState('grams'); // 'grams' o 'kg'
+  const [weightUnit, setWeightUnit] = useState('grams');
 
-  // 1. Cargar lista de sucursales disponibles al iniciar
   useEffect(() => {
     if (!storeId) return;
     const fetchBranches = async () => {
@@ -46,7 +45,6 @@ export default function PosScreen() {
     fetchBranches();
   }, [storeId]);
 
-  // 2. Cargar productos de la sucursal seleccionada
   useEffect(() => {
     if (!storeId) return;
     const fetchProductsByBranch = async () => {
@@ -67,7 +65,7 @@ export default function PosScreen() {
                 price: Number(data.price) || 0,
                 stock: Number(data.stock) || 0,
                 sku: data.sku ? String(data.sku).trim() : '---',
-                isWeightBased: data.isWeightBased || false // ⚖️ Importante
+                isWeightBased: data.isWeightBased || false
               });
             });
           }
@@ -85,14 +83,14 @@ export default function PosScreen() {
                 price: Number(data.price) || 0,
                 stock: Number(data.stock) || 0,
                 sku: data.sku ? String(data.sku).trim() : '---',
-                isWeightBased: data.isWeightBased || false // ⚖️ Importante
+                isWeightBased: data.isWeightBased || false
               });
             });
           }
         }
         
         setAllProducts(productsList);
-        setCart([]); // 🛡️ CORREGIDO: Inicializado como array vacío para evitar errores en reduce()
+        setCart([]);
       } catch (error) {
         console.error('❌ [POS] Error al cargar productos de la sucursal:', error);
       }
@@ -100,7 +98,6 @@ export default function PosScreen() {
     fetchProductsByBranch();
   }, [storeId, selectedBranchId, successMsg]);
 
-  // 3. Cargar tickets pendientes y clientes
   useEffect(() => {
     if (!storeId) return;
     const fetchData = async () => {
@@ -117,7 +114,6 @@ export default function PosScreen() {
     fetchData();
   }, [storeId]);
 
-  // Manejo de adición al carrito con validación de peso o unidad
   const handleProductSelection = (product) => {
     if (product.isWeightBased) {
       setWeightProduct(product);
@@ -138,7 +134,6 @@ export default function PosScreen() {
       const existing = cartArray.find(item => item.id === product.id);
       const currentQtyInCart = existing ? existing.qty : 0;
 
-      // Si no es por peso, validamos stock estricto. Si es por peso (fiambre/pan), se permite vender sin bloquear por stock.
       if (!product.isWeightBased && currentQtyInCart + quantity > cleanStock) {
         alert('No hay suficiente stock disponible para este producto en esta sucursal.');
         return cartArray;
@@ -153,7 +148,6 @@ export default function PosScreen() {
     });
   };
 
-  // Confirmar el peso desde el modal flotante
   const handleConfirmWeightSale = () => {
     if (!weightProduct || !weightInput) return;
 
@@ -170,21 +164,18 @@ export default function PosScreen() {
     setWeightProduct(null);
   };
 
-  // SOPORTE LECTORA / ENTER BLINDADO (Búsqueda exacta por SKU o nombre)
   const handleKeyDown = async (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       const query = searchTerm.trim().toLowerCase();
       if (!query) return;
 
-      // 1. Buscar en memoria local
       let foundProduct = allProducts.find(p => {
         const pSku = p.sku ? String(p.sku).trim().toLowerCase() : '';
         const pName = p.name ? String(p.name).trim().toLowerCase() : '';
         return pSku === query || pName.includes(query);
       });
 
-      // 2. Búsqueda de emergencia en Firestore
       if (!foundProduct && storeId) {
         try {
           const categoriesPath = selectedBranchId === 'main' 
@@ -296,6 +287,10 @@ export default function PosScreen() {
       return;
     }
 
+    // Copiamos el carrito actual antes de vaciarlo para registrar la venta detallada
+    const currentCartSnapshot = [...cart];
+    const currentTotal = cartTotal;
+
     try {
       for (const item of cart) {
         let productRef;
@@ -305,12 +300,35 @@ export default function PosScreen() {
           productRef = doc(db, 'stores', storeId, 'branches', selectedBranchId, 'categories', item.categoryId, 'products', item.id);
         }
 
-        // Si es por peso, no requiere descuento estricto de inventario por unidad
         if (!item.isWeightBased) {
           const newStock = Math.max(0, Number((item.stock - item.qty).toFixed(3)));
           await updateDoc(productRef, { stock: newStock });
         }
       }
+
+      // 📥 REGISTRAR VENTA AUTOMÁTICAMENTE CON DETALLE EN VENTAS DEL DÍA
+      const today = new Date().toISOString().split('T')[0];
+      const savedDate = localStorage.getItem('valhalla_sales_date');
+      let currentSales = [];
+
+      if (savedDate === today) {
+        const existing = localStorage.getItem('valhalla_daily_sales');
+        if (existing) currentSales = JSON.parse(existing);
+      } else {
+        localStorage.setItem('valhalla_sales_date', today);
+      }
+
+      const newSaleRecord = {
+        id: Date.now(),
+        total: currentTotal,
+        itemsCount: currentCartSnapshot.reduce((sum, item) => sum + item.qty, 0),
+        items: currentCartSnapshot, // Guardado correcto y detallado
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      currentSales.push(newSaleRecord);
+      localStorage.setItem('valhalla_daily_sales', JSON.stringify(currentSales));
+      // ----------------------------------------------------
 
       setSuccessMsg('¡Venta cobrada con éxito y stock actualizado en la sucursal!');
       setCart([]);
@@ -328,6 +346,9 @@ export default function PosScreen() {
       return;
     }
 
+    const currentCartSnapshot = [...cart];
+    const currentTotal = cartTotal;
+
     try {
       const customerRef = doc(db, 'stores', storeId, 'customers', selectedCustomerId);
       const customerSnap = await getDoc(customerRef);
@@ -338,7 +359,7 @@ export default function PosScreen() {
       }
 
       const currentDebt = Number(customerSnap.data().debt) || 0;
-      await updateDoc(customerRef, { debt: currentDebt + cartTotal });
+      await updateDoc(customerRef, { debt: currentDebt + currentTotal });
 
       for (const item of cart) {
         let productRef;
@@ -354,6 +375,29 @@ export default function PosScreen() {
         }
       }
 
+      // REGISTRAR FIADO EN VENTAS DEL DÍA
+      const today = new Date().toISOString().split('T')[0];
+      const savedDate = localStorage.getItem('valhalla_sales_date');
+      let currentSales = [];
+
+      if (savedDate === today) {
+        const existing = localStorage.getItem('valhalla_daily_sales');
+        if (existing) currentSales = JSON.parse(existing);
+      } else {
+        localStorage.setItem('valhalla_sales_date', today);
+      }
+
+      const newSaleRecord = {
+        id: Date.now(),
+        total: currentTotal,
+        itemsCount: currentCartSnapshot.reduce((sum, item) => sum + item.qty, 0),
+        items: currentCartSnapshot,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      currentSales.push(newSaleRecord);
+      localStorage.setItem('valhalla_daily_sales', JSON.stringify(currentSales));
+
       setSuccessMsg('¡Fiado registrado con éxito a la cuenta del cliente!');
       setCart([]);
       setSelectedCustomerId('');
@@ -365,10 +409,18 @@ export default function PosScreen() {
     }
   };
 
+  // Función para compartir el link del catálogo público
+  const handleShareCatalog = () => {
+    if (!storeId) return;
+    const catalogUrl = `${window.location.origin}/tienda/${storeId}`;
+    navigator.clipboard.writeText(catalogUrl);
+    alert('¡Enlace del catálogo copiado al portapapeles! Ya puedes pegarlo y compartirlo por WhatsApp.');
+  };
+
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-7xl mx-auto">
       
-      {/* Selector de Sucursal Activa en la Caja */}
+      {/* Selector de Sucursal, Ventas del Día y Compartir Catálogo */}
       <div className="bg-slate-900 border border-slate-800 p-4 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-center text-emerald-400">
@@ -380,20 +432,39 @@ export default function PosScreen() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-xs font-bold uppercase text-slate-400">Local:</span>
-          <select
-            value={selectedBranchId}
-            onChange={e => setSelectedBranchId(e.target.value)}
-            className="flex-1 sm:w-64 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-emerald-500"
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end flex-wrap">
+          <button
+            onClick={() => navigate('/express/ventas-dia')}
+            className="px-4 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold rounded-xl transition flex items-center gap-2"
+            title="Ver resumen y ventas del día"
           >
-            <option value="main">📍 Sucursal Principal</option>
-            {branches.map(branch => (
-              <option key={branch.id} value={branch.id}>
-                📍 {branch.name}
-              </option>
-            ))}
-          </select>
+            <DollarSign className="w-4 h-4" /> Ventas del Día
+          </button>
+
+          <button
+            onClick={handleShareCatalog}
+            disabled={!storeId}
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+            title="Copiar enlace del catálogo para WhatsApp"
+          >
+            <Share2 className="w-4 h-4" /> Compartir Catálogo
+          </button>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase text-slate-400">Local:</span>
+            <select
+              value={selectedBranchId}
+              onChange={e => setSelectedBranchId(e.target.value)}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-emerald-500"
+            >
+              <option value="main">📍 Sucursal Principal</option>
+              {branches.map(branch => (
+                <option key={branch.id} value={branch.id}>
+                  📍 {branch.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -404,8 +475,6 @@ export default function PosScreen() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* COLUMNA IZQUIERDA: Escáner Puro */}
         <ProductScanner
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -413,7 +482,6 @@ export default function PosScreen() {
           allProductsCount={allProducts.length}
         />
 
-        {/* COLUMNA DERECHA: Carrito Activo */}
         <CartSection
           cart={cart}
           updateQty={updateQty}
@@ -425,14 +493,11 @@ export default function PosScreen() {
           onShowCreditModal={() => setShowCreditModal(true)}
           onCheckout={handleCheckout}
         />
-
       </div>
 
-      {/* ⚖️ MODAL FLOTANTE DE VENTA POR PESO / KILO */}
       {showWeightModal && weightProduct && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 text-slate-100 rounded-3xl p-6 max-w-sm w-full relative shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
-            
+          <div className="bg-slate-900 border border-slate-800 text-slate-100 rounded-3xl p-6 max-w-sm w-full relative shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h3 className="text-sm font-black uppercase tracking-wide text-emerald-400 flex items-center gap-2">
                 <Scale className="w-5 h-5" /> Producto por Kilo
@@ -474,7 +539,6 @@ export default function PosScreen() {
                 </div>
               </div>
 
-              {/* Cálculo en tiempo real del Subtotal */}
               {weightInput && !isNaN(weightInput) && (
                 <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
                   <span className="text-xs text-slate-400">Subtotal a cobrar:</span>
@@ -499,12 +563,10 @@ export default function PosScreen() {
                 Agregar al Carrito
               </button>
             </div>
-
           </div>
         </div>
       )}
 
-      {/* MODAL DE DAR FIADO */}
       {showCreditModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 text-slate-100 rounded-3xl p-6 max-w-md w-full relative shadow-2xl space-y-5">
@@ -556,7 +618,6 @@ export default function PosScreen() {
         </div>
       )}
 
-      {/* MODAL DE TICKETS PENDIENTES */}
       {showPendingModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 text-slate-100 rounded-3xl p-6 max-w-lg w-full relative shadow-2xl space-y-5">
