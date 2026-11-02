@@ -12,83 +12,89 @@ export default function BranchesManage() {
   const [branchAddress, setBranchAddress] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  // Estados para el plan y los límites
+
+  // Estados para el plan y límites
   const [planName, setPlanName] = useState('');
   const [maxBranches, setMaxBranches] = useState(1);
 
-  // Escuchar cambios de autenticación para asegurar el storeId
+  // Escuchar cambios de autenticación
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        setStoreId(user.uid);
-      } else {
-        setStoreId(null);
-      }
+      setStoreId(user ? user.uid : null);
     });
     return () => unsubscribe();
   }, []);
 
-  // Cargar sucursales y el límite exacto según el plan en Firebase
+  // Cargar sucursales y configuración del plan
   useEffect(() => {
     if (!storeId) return;
+
+    let isMounted = true;
+
     const fetchBranchesAndPlan = async () => {
       try {
-        // 1. Obtener sucursales secundarias creadas en la subcolección
+        // 1. Obtener sucursales secundarias
         const snap = await getDocs(collection(db, 'stores', storeId, 'branches'));
         const loadedBranches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setBranches(loadedBranches);
 
         // 2. Obtener plan actual de la tienda
         const storeRef = doc(db, 'stores', storeId);
         const storeSnap = await getDoc(storeRef);
         const currentPlanKey = storeSnap.exists() && storeSnap.data().plan ? storeSnap.data().plan : 'basico';
 
-        // 3. Consultar los límites en ExpressPlanes
+        // 3. Consultar límites en ExpressPlanes
         const planRef = doc(db, 'ExpressPlanes', currentPlanKey);
         const planSnap = await getDoc(planRef);
-        if (planSnap.exists()) {
-          setPlanName(planSnap.data().name || currentPlanKey);
-          setMaxBranches(planSnap.data().maxBranches ?? 1);
+
+        if (isMounted) {
+          setBranches(loadedBranches);
+          if (planSnap.exists()) {
+            setPlanName(planSnap.data().name || currentPlanKey);
+            setMaxBranches(planSnap.data().maxBranches ?? 1);
+          }
         }
       } catch (error) {
         console.error('Error al cargar sucursales y plan:', error);
       }
     };
+
     fetchBranchesAndPlan();
+
+    return () => {
+      isMounted = false;
+    };
   }, [storeId]);
 
-  // Total de sucursales actuales = 1 (Principal) + cantidad de locales adicionales en la subcolección
+  // Total de sucursales actuales: 1 principal + adicionales
   const totalStoresCount = 1 + branches.length;
   const isLimitReached = totalStoresCount >= maxBranches;
-
-  // Cuántas sucursales adicionales permite el plan (ej: si maxBranches es 2, permite 1 adicional)
   const allowedAdditionalBranches = Math.max(0, maxBranches - 1);
 
   // Registrar nueva sucursal
   const handleAddBranch = async (e) => {
     e.preventDefault();
-    if (!branchName.trim() || !storeId) return;
+    const cleanName = branchName.trim();
+    if (!cleanName || !storeId) return;
 
     setErrorMsg('');
     setLoading(true);
 
     try {
       if (totalStoresCount >= maxBranches) {
-        setErrorMsg(`Has alcanzado el límite máximo de ${maxBranches} sucursales permitidas para tu plan ${planName}. Elimina alguna sucursal excedente o actualiza tu plan.`);
+        setErrorMsg(`Has alcanzado el límite máximo de ${maxBranches} sucursales permitidas para tu plan ${planName}.`);
         setLoading(false);
         return;
       }
 
       const newBranchData = {
-        name: branchName.trim(),
+        name: cleanName,
         address: branchAddress.trim() || '---',
         createdAt: new Date().toISOString()
       };
 
       const docRef = await addDoc(collection(db, 'stores', storeId, 'branches'), newBranchData);
-      setBranches([...branches, { id: docRef.id, ...newBranchData }]);
-      
+      setBranches(prev => [...prev, { id: docRef.id, ...newBranchData }]);
+
       setBranchName('');
       setBranchAddress('');
     } catch (error) {
@@ -99,7 +105,7 @@ export default function BranchesManage() {
     }
   };
 
-  // Eliminar sucursal (permite depurar los excedentes)
+  // Eliminar sucursal
   const handleDeleteBranch = async (branchId) => {
     if (!window.confirm('¿Estás seguro de eliminar esta sucursal?')) return;
 
@@ -112,81 +118,90 @@ export default function BranchesManage() {
   };
 
   return (
-    <div className="p-4 sm:p-8 space-y-6 max-w-5xl mx-auto">
+    <div className="p-3.5 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-5xl mx-auto text-gray-100">
       
-      {/* Cabecera */}
-      <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-black uppercase tracking-wide text-slate-100 flex items-center gap-3">
-            <Building className="w-7 h-7 text-emerald-400" /> Administración de Sucursales
+      {/* Cabecera y Resumen de Plan */}
+      <div className="bg-gray-900/90 border border-gray-800 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xl backdrop-blur-sm">
+        <div className="space-y-1">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-100 flex items-center gap-2.5">
+            <Building className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500 shrink-0" />
+            <span>Administración de Sucursales</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Gestiona los locales de tu red de supermercados según los límites de tu plan activo.
+          <p className="text-xs text-slate-400">
+            Gestiona los locales de tu red según el cupo contratado.
           </p>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs bg-slate-950 border border-slate-800 text-slate-300 px-4 py-2 rounded-xl font-mono">
-            Plan: <strong className="text-emerald-400">{planName || 'Cargando...'}</strong>
-          </span>
-          <span className="text-xs bg-slate-950 border border-slate-800 text-slate-300 px-4 py-2 rounded-xl font-mono">
-            Total Sucursales: <strong className="text-emerald-400">{totalStoresCount} / {maxBranches}</strong>
-          </span>
+
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="bg-slate-950/80 border border-gray-800 text-xs px-3 py-1.5 rounded-xl font-mono">
+            <span className="text-slate-400">Plan:</span>{' '}
+            <strong className="text-emerald-400">{planName || 'Cargando...'}</strong>
+          </div>
+          <div className="bg-slate-950/80 border border-gray-800 text-xs px-3 py-1.5 rounded-xl font-mono">
+            <span className="text-slate-400">Locales:</span>{' '}
+            <strong className="text-emerald-400 font-bold">{totalStoresCount} / {maxBranches}</strong>
+          </div>
         </div>
       </div>
 
+      {/* Alerta de Error */}
       {errorMsg && (
-        <div className="p-4 bg-red-950/50 border border-red-500/40 rounded-2xl text-xs text-red-300 flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-          <span>{errorMsg}</span>
+        <div className="p-3.5 bg-red-950/40 border border-red-500/30 rounded-xl sm:rounded-2xl text-xs text-red-300 flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+          <span className="leading-tight">{errorMsg}</span>
         </div>
       )}
 
-      {/* Alerta si hay exceso de sucursales por bajada de plan */}
+      {/* Alerta por Exceso de Sucursales */}
       {totalStoresCount > maxBranches && (
-        <div className="bg-red-950/40 border border-red-500/40 p-5 rounded-3xl flex items-center gap-4 text-red-300">
-          <ShieldAlert className="w-8 h-8 text-red-400 shrink-0" />
+        <div className="bg-red-950/30 border border-red-500/30 p-4 sm:p-5 rounded-2xl sm:rounded-3xl flex items-start sm:items-center gap-3 sm:gap-4 text-red-300">
+          <ShieldAlert className="w-6 h-6 sm:w-8 sm:h-8 text-red-400 shrink-0 mt-0.5 sm:mt-0" />
           <div className="space-y-1 text-xs">
-            <h2 className="font-black uppercase tracking-wide text-red-400">Exceso de sucursales detectado</h2>
-            <p>
-              Tu plan actual ({planName}) permite un máximo de <strong>{maxBranches}</strong> sucursales, pero posees <strong>{totalStoresCount}</strong> activas. Las sucursales excedentes se encuentran <strong>suspendidas</strong> hasta que actualices tu plan o elimines las sobrantes.
+            <h2 className="font-bold text-red-300 text-sm">Exceso de sucursales detectado</h2>
+            <p className="text-red-300/90 leading-relaxed">
+              Tu plan ({planName}) permite hasta <strong>{maxBranches}</strong> locales, pero tienes <strong>{totalStoresCount}</strong> registrados. Las sucursales excedentes se encuentran inactivas hasta regularizar la cuenta.
             </p>
           </div>
         </div>
       )}
 
-      {/* Aviso si el plan es básico (1 sola sucursal) */}
+      {/* Banner Informativo para Plan Básico */}
       {maxBranches <= 1 && branches.length === 0 && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 p-5 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 sm:p-5 rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500/20 border border-emerald-500/40 rounded-xl flex items-center justify-center text-emerald-400 shrink-0">
-              <Lock className="w-5 h-5" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500/15 border border-emerald-500/30 rounded-xl flex items-center justify-center text-emerald-400 shrink-0">
+              <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-xs font-black uppercase text-emerald-400 tracking-wide">Límite del Plan Básico</h2>
+              <h2 className="text-xs sm:text-sm font-bold text-gray-100">Límite del Plan Básico</h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Tu plan actual incluye únicamente 1 sucursal (la principal). Actualiza a un plan superior para abrir locales adicionales.
+                Tu plan actual incluye únicamente 1 sucursal (la principal). Pasa a un plan superior para habilitar más locales.
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => navigate('/express/config')}
-            className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+            className="w-full sm:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs rounded-xl transition shrink-0 shadow-md shadow-emerald-500/20"
           >
-            Cambiar de Plan
+            Ver Planes
           </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
         
         {/* Formulario de Alta de Sucursal */}
-        <div className="md:col-span-5 bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 relative">
-          <h2 className="text-base font-black uppercase tracking-wide text-slate-100">Abrir Nueva Sucursal</h2>
+        <div className="md:col-span-5 bg-gray-900/90 border border-gray-800 p-4 sm:p-6 rounded-2xl sm:rounded-3xl space-y-4 shadow-xl backdrop-blur-sm">
+          <h2 className="text-sm sm:text-base font-bold text-gray-100">
+            Abrir Nueva Sucursal
+          </h2>
 
           <form onSubmit={handleAddBranch} className="space-y-3">
             <div>
-              <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nombre del Local</label>
+              <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                Nombre del Local
+              </label>
               <input
                 type="text"
                 placeholder="Ej: Sucursal Centro #2"
@@ -194,90 +209,102 @@ export default function BranchesManage() {
                 onChange={e => setBranchName(e.target.value)}
                 disabled={isLimitReached}
                 required
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-slate-950 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-gray-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
               />
             </div>
+
             <div>
-              <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Dirección</label>
+              <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                Dirección
+              </label>
               <input
                 type="text"
                 placeholder="Ej: Av. España 1230"
                 value={branchAddress}
                 onChange={e => setBranchAddress(e.target.value)}
                 disabled={isLimitReached}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-slate-950 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-gray-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
               />
             </div>
+
             <button
               type="submit"
-              disabled={loading || isLimitReached}
-              className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 mt-2 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+              disabled={loading || isLimitReached || !branchName.trim()}
+              className="w-full py-2.5 sm:py-3 px-4 bg-emerald-500 hover:bg-emerald-400 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-950 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20"
             >
-              <Plus className="w-4 h-4" /> Registrar Sucursal
+              <Plus className="w-4 h-4" />
+              <span>Registrar Sucursal</span>
             </button>
           </form>
         </div>
 
-        {/* Listado de Sucursales con control de exceso */}
-        <div className="md:col-span-7 bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4">
-          <h2 className="text-base font-black uppercase tracking-wide text-slate-100">Tus Locales Activos</h2>
+        {/* Listado de Sucursales */}
+        <div className="md:col-span-7 bg-gray-900/90 border border-gray-800 p-4 sm:p-6 rounded-2xl sm:rounded-3xl space-y-3.5 shadow-xl backdrop-blur-sm">
+          <h2 className="text-sm sm:text-base font-bold text-gray-100">
+            Tus Locales Activos
+          </h2>
 
-          <div className="space-y-3 max-h-87.5 overflow-y-auto pr-1">
-            {/* Sucursal Principal fija (siempre activa) */}
-            <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                  <Building className="w-4 h-4 text-emerald-400" /> Sucursal Principal (Registrada)
+          <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-800">
+            {/* Sucursal Principal */}
+            <div className="bg-slate-950/70 border border-gray-800/80 p-3 sm:p-4 rounded-xl flex items-center justify-between gap-3">
+              <div className="min-w-0 space-y-0.5">
+                <h3 className="text-xs sm:text-sm font-semibold text-gray-100 flex items-center gap-2 truncate">
+                  <Building className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="truncate">Sucursal Principal (Registrada)</span>
                 </h3>
-                <p className="text-xs text-slate-400 font-mono">
+                <p className="text-[11px] text-slate-400">
                   Local base de operaciones de la cuenta.
                 </p>
               </div>
-              <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-full font-bold">
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold shrink-0">
                 Principal
               </span>
             </div>
 
-            {/* Sucursales adicionales (Evaluando si superan el límite actual) */}
+            {/* Sucursales Secundarias */}
             {branches.map((branch, index) => {
               const isExceeded = index >= allowedAdditionalBranches;
 
               return (
                 <div 
                   key={branch.id} 
-                  className={`border p-4 rounded-2xl flex items-center justify-between transition ${
+                  className={`border p-3 sm:p-4 rounded-xl flex items-center justify-between gap-3 transition-colors ${
                     isExceeded 
-                      ? 'bg-red-950/40 border-red-500/40' 
-                      : 'bg-slate-950 border-slate-800'
+                      ? 'bg-red-950/20 border-red-500/30' 
+                      : 'bg-slate-950/70 border-gray-800/80'
                   }`}
                 >
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                      <Building className={`w-4 h-4 ${isExceeded ? 'text-red-400' : 'text-emerald-400'}`} /> {branch.name}
+                  <div className="min-w-0 space-y-1">
+                    <h3 className="text-xs sm:text-sm font-semibold text-gray-100 flex items-center gap-2 truncate">
+                      <Building className={`w-4 h-4 shrink-0 ${isExceeded ? 'text-red-400' : 'text-emerald-400'}`} />
+                      <span className="truncate">{branch.name}</span>
                     </h3>
-                    <p className="text-xs text-slate-400 flex items-center gap-1 font-mono">
-                      <MapPin className="w-3.5 h-3.5 text-emerald-400" /> {branch.address}
+                    <p className="text-[11px] text-slate-400 flex items-center gap-1.5 font-mono truncate">
+                      <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="truncate">{branch.address}</span>
                     </p>
                     {isExceeded && (
-                      <span className="text-[10px] text-red-400 font-bold block pt-1">
-                        ⚠️ Suspendido por exceder el límite de tu plan actual ({maxBranches} locales máx.)
+                      <span className="text-[10px] text-red-400 font-medium block">
+                        Excede el límite del plan ({maxBranches} locales máx.)
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold border ${
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
                       isExceeded 
-                        ? 'bg-red-950 text-red-400 border-red-500/30' 
-                        : 'bg-emerald-950 text-emerald-400 border-emerald-500/30'
+                        ? 'bg-red-500/10 text-red-400 border-red-500/20' 
+                        : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                     }`}>
-                      {isExceeded ? 'Suspendida' : 'Activa'}
+                      {isExceeded ? 'Inactiva' : 'Activa'}
                     </span>
 
                     <button
+                      type="button"
                       onClick={() => handleDeleteBranch(branch.id)}
-                      className="p-2 text-slate-400 hover:text-red-400 transition rounded-xl bg-slate-900 border border-slate-800 shadow-sm"
+                      className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-900 transition"
                       title="Eliminar Local"
+                      aria-label="Eliminar Local"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { db } from '../../services/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { canCreateCategory } from '../services/planValidation';
@@ -13,22 +13,26 @@ export default function CategoryList({ storeId, branchId, onSelectCategory, sele
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Función auxiliar para obtener la referencia de la colección según la sucursal activa
-  const getCategoriesCollectionRef = () => {
+  const getCategoriesCollectionRef = useCallback(() => {
     if (!branchId || branchId === 'main') {
       return collection(db, 'stores', storeId, 'categories');
-    } else {
-      return collection(db, 'stores', storeId, 'branches', branchId, 'categories');
     }
-  };
+    return collection(db, 'stores', storeId, 'branches', branchId, 'categories');
+  }, [storeId, branchId]);
 
   useEffect(() => {
     if (!storeId) return;
+
+    let isMounted = true;
+
     const fetchCategories = async () => {
       try {
         const querySnapshot = await getDocs(getCategoriesCollectionRef());
+        if (!isMounted) return;
+
         const cats = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
         setCategories(cats);
-        
+
         if (cats.length > 0 && !selectedCategoryId) {
           onSelectCategory(cats[0].id, cats[0].name);
         } else if (cats.length === 0) {
@@ -38,13 +42,19 @@ export default function CategoryList({ storeId, branchId, onSelectCategory, sele
         console.error('Error al cargar categorías:', error);
       }
     };
+
     fetchCategories();
-  }, [storeId, branchId, selectedCategoryId, onSelectCategory, refreshKey]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [storeId, branchId, selectedCategoryId, onSelectCategory, refreshKey, getCategoriesCollectionRef]);
 
   // CREAR CATEGORÍA
   const handleCreateCategory = async (e) => {
     e.preventDefault();
-    if (!newCategoryName.trim() || !storeId) return;
+    const cleanName = newCategoryName.trim();
+    if (!cleanName || !storeId) return;
 
     setErrorMsg('');
     setLoading(true);
@@ -58,15 +68,15 @@ export default function CategoryList({ storeId, branchId, onSelectCategory, sele
       }
 
       const docRef = await addDoc(getCategoriesCollectionRef(), {
-        name: newCategoryName.trim(),
+        name: cleanName,
         createdAt: new Date().toISOString()
       });
 
-      const newCat = { id: docRef.id, name: newCategoryName.trim() };
+      const newCat = { id: docRef.id, name: cleanName };
       setCategories(prev => [...prev, newCat]);
       setNewCategoryName('');
       setRefreshKey(prev => prev + 1);
-      
+
       if (!selectedCategoryId) {
         onSelectCategory(newCat.id, newCat.name);
       }
@@ -85,15 +95,12 @@ export default function CategoryList({ storeId, branchId, onSelectCategory, sele
     if (!updatedName || !updatedName.trim() || updatedName.trim() === currentName) return;
 
     try {
-      let catRef;
-      if (!branchId || branchId === 'main') {
-        catRef = doc(db, 'stores', storeId, 'categories', catId);
-      } else {
-        catRef = doc(db, 'stores', storeId, 'branches', branchId, 'categories', catId);
-      }
+      const catRef = (!branchId || branchId === 'main')
+        ? doc(db, 'stores', storeId, 'categories', catId)
+        : doc(db, 'stores', storeId, 'branches', branchId, 'categories', catId);
 
       await updateDoc(catRef, { name: updatedName.trim() });
-      
+
       setCategories(prev => prev.map(c => c.id === catId ? { ...c, name: updatedName.trim() } : c));
       if (selectedCategoryId === catId) {
         onSelectCategory(catId, updatedName.trim());
@@ -110,12 +117,9 @@ export default function CategoryList({ storeId, branchId, onSelectCategory, sele
     if (!window.confirm('¿Estás seguro de eliminar esta categoría y sus productos?')) return;
 
     try {
-      let catRef;
-      if (!branchId || branchId === 'main') {
-        catRef = doc(db, 'stores', storeId, 'categories', catId);
-      } else {
-        catRef = doc(db, 'stores', storeId, 'branches', branchId, 'categories', catId);
-      }
+      const catRef = (!branchId || branchId === 'main')
+        ? doc(db, 'stores', storeId, 'categories', catId)
+        : doc(db, 'stores', storeId, 'branches', branchId, 'categories', catId);
 
       await deleteDoc(catRef);
       setCategories(prev => prev.filter(c => c.id !== catId));
@@ -129,43 +133,57 @@ export default function CategoryList({ storeId, branchId, onSelectCategory, sele
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex flex-col h-full shadow-xl">
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
-        <div className="flex items-center gap-2">
-          <Layers className="w-5 h-5 text-emerald-400" />
-          <h2 className="text-base font-black uppercase tracking-wide text-slate-100">Categorías</h2>
+    <div className="w-full bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col h-auto min-h-[380px] lg:h-[75vh] shadow-xl backdrop-blur-sm">
+      
+      {/* Cabecera de Categorías */}
+      <div className="flex items-center justify-between pb-3.5 border-b border-gray-800/80 mb-3.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <Layers className="w-5 h-5 text-emerald-500 shrink-0" />
+          <h2 className="text-sm sm:text-base font-bold text-gray-100 tracking-tight truncate">
+            Categorías
+          </h2>
         </div>
-        <PlanLimitsBadge key={refreshKey} type="categories" />
+        <div className="shrink-0">
+          <PlanLimitsBadge key={refreshKey} type="categories" />
+        </div>
       </div>
 
+      {/* Mensaje de Error */}
       {errorMsg && (
-        <div className="mb-4 p-3 bg-red-950/50 border border-red-500/40 rounded-xl text-xs text-red-300 flex items-start gap-2">
+        <div className="mb-3 p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-          <span>{errorMsg}</span>
+          <span className="leading-tight">{errorMsg}</span>
         </div>
       )}
 
-      <form onSubmit={handleCreateCategory} className="flex gap-2 mb-4">
+      {/* Formulario de Alta Rápida */}
+      <form onSubmit={handleCreateCategory} className="flex gap-2 mb-3">
         <input
           type="text"
           placeholder="Nueva categoría..."
           value={newCategoryName}
           onChange={(e) => setNewCategoryName(e.target.value)}
-          className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+          className="flex-1 min-w-0 bg-slate-950 border border-gray-800 rounded-xl px-3 py-2 text-xs text-gray-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
         />
         <button
           type="submit"
-          disabled={loading}
-          className="p-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 rounded-xl transition flex items-center justify-center font-bold"
+          disabled={loading || !newCategoryName.trim()}
+          className="p-2 sm:px-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:pointer-events-none active:scale-95 text-slate-950 rounded-xl transition flex items-center justify-center font-bold shrink-0 shadow-md shadow-emerald-500/20"
           title="Agregar categoría"
+          aria-label="Agregar categoría"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </form>
 
-      <div className="space-y-2 overflow-y-auto flex-1 pr-1">
+      {/* Lista de Categorías */}
+      <div className="space-y-1.5 overflow-y-auto flex-1 pr-1 min-h-[140px] max-h-[260px] lg:max-h-none scrollbar-thin scrollbar-thumb-gray-800">
         {categories.length === 0 ? (
-          <p className="text-xs text-slate-500 text-center py-8">No hay categorías cargadas en esta sucursal.</p>
+          <div className="h-full min-h-[140px] flex items-center justify-center text-center p-4 border border-dashed border-gray-800/60 rounded-xl">
+            <p className="text-xs text-slate-500">
+              No hay categorías cargadas en esta sucursal.
+            </p>
+          </div>
         ) : (
           categories.map((cat) => {
             const isSelected = selectedCategoryId === cat.id;
@@ -173,36 +191,49 @@ export default function CategoryList({ storeId, branchId, onSelectCategory, sele
               <div
                 key={cat.id}
                 onClick={() => onSelectCategory(cat.id, cat.name)}
-                className={`flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition ${
-                  isSelected 
-                    ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' 
-                    : 'bg-slate-950/40 border-slate-800 text-slate-300 hover:border-slate-700'
+                className={`group flex items-center justify-between p-2.5 sm:p-3 rounded-xl border cursor-pointer transition-all ${
+                  isSelected
+                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-semibold'
+                    : 'bg-slate-950/60 border-gray-800/80 text-gray-300 hover:border-gray-700 hover:bg-slate-950/90'
                 }`}
               >
-                <span className="text-xs font-bold truncate">{cat.name}</span>
-                <div className="flex items-center gap-1">
-                  {/* Botón Editar con ícono nativo de Lucide */}
+                <span className="text-xs sm:text-sm truncate pr-2 select-none">
+                  {cat.name}
+                </span>
+
+                <div className="flex items-center gap-1 shrink-0">
                   <button
+                    type="button"
                     onClick={(e) => handleEditCategory(cat.id, cat.name, e)}
-                    className="p-1.5 text-slate-500 hover:text-emerald-400 transition rounded-lg"
-                    title="Editar Categoría"
+                    className="p-1 text-slate-400 hover:text-emerald-400 rounded-lg hover:bg-slate-900 transition"
+                    title="Editar categoría"
+                    aria-label="Editar categoría"
                   >
-                    <Edit3 className="w-4 h-4" />
+                    <Edit3 className="w-3.5 h-3.5" />
                   </button>
+
                   <button
+                    type="button"
                     onClick={(e) => handleDeleteCategory(cat.id, e)}
-                    className="p-1.5 text-slate-500 hover:text-red-400 transition rounded-lg"
-                    title="Eliminar"
+                    className="p-1 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-900 transition"
+                    title="Eliminar categoría"
+                    aria-label="Eliminar categoría"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                  <ChevronRight className={`w-4 h-4 ${isSelected ? 'text-emerald-400' : 'text-slate-600'}`} />
+
+                  <ChevronRight
+                    className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 ${
+                      isSelected ? 'text-emerald-400' : 'text-slate-600'
+                    }`}
+                  />
                 </div>
               </div>
             );
           })
         )}
       </div>
+
     </div>
   );
 }

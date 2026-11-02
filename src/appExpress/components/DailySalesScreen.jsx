@@ -65,7 +65,7 @@ export default function DailySalesScreen() {
   };
 
   const handleDeleteSale = (id) => {
-    const updatedSales = sales.filter(s => s.id !== id);
+    const updatedSales = sales.filter((s) => s.id !== id);
     saveToLocalStorage(updatedSales);
   };
 
@@ -83,29 +83,29 @@ export default function DailySalesScreen() {
       return;
     }
 
-    let message = `📊 *INFORME DE VENTAS - ${storeName}* 📊%0A`;
-    message += `📅 *Fecha:* ${new Date().toLocaleDateString()}%0A`;
-    message += `-----------------------------------%0A%0A`;
+    let message = `📊 *INFORME DE VENTAS - ${storeName}*\n`;
+    message += `📅 *Fecha:* ${new Date().toLocaleDateString('es-AR')}\n`;
+    message += `-----------------------------------\n\n`;
 
     sales.forEach((sale, index) => {
-      message += `🔹 *Ticket #${index + 1}* [${sale.time}]%0A`;
-      
+      message += `🔹 *Ticket #${index + 1}* [${sale.time || '--:--'}]\n`;
+
       if (sale.items && Array.isArray(sale.items) && sale.items.length > 0) {
-        sale.items.forEach(item => {
-          const subtotal = Number(item.price) * Number(item.qty);
-          message += `   ▪️ ${item.qty} ${item.isWeightBased ? 'kg' : 'un.'} x ${item.name} ($${subtotal.toLocaleString('es-AR')})%0A`;
+        sale.items.forEach((item) => {
+          const subtotal = Number(item.price || 0) * Number(item.qty || 0);
+          message += `   ▪️ ${item.qty} ${item.isWeightBased ? 'kg' : 'un.'} x ${item.name} ($${subtotal.toLocaleString('es-AR')})\n`;
         });
       } else {
-        message += `   ▪️ Venta general sin detalle de ítems%0A`;
+        message += `   ▪️ Venta general sin detalle de ítems\n`;
       }
-      
-      message += `   👉 *Subtotal:* $${Number(sale.total).toLocaleString('es-AR')}%0A%0A`;
+
+      message += `   👉 *Subtotal:* $${Number(sale.total || 0).toLocaleString('es-AR')}\n\n`;
     });
 
-    message += `-----------------------------------%0A`;
+    message += `-----------------------------------\n`;
     message += `💰 *TOTAL RECAUDADO HOY: $${totalDaySales.toLocaleString('es-AR')}*`;
 
-    const url = `https://wa.me/${storePhone}?text=${message}`;
+    const url = `https://wa.me/${storePhone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
 
@@ -121,6 +121,7 @@ export default function DailySalesScreen() {
       <!DOCTYPE html>
       <html>
         <head>
+          <meta charset="UTF-8" />
           <title>Cierre de Caja - ${storeName}</title>
           <style>
             body { font-family: monospace; padding: 20px; color: #000; max-width: 400px; margin: auto; }
@@ -134,30 +135,42 @@ export default function DailySalesScreen() {
         <body>
           <h2>${storeName}</h2>
           <h4>INFORME DE VENTAS DEL DÍA</h4>
-          <p style="text-align: center; font-size: 12px;">Fecha: ${new Date().toLocaleDateString()}</p>
+          <p style="text-align: center; font-size: 12px;">Fecha: ${new Date().toLocaleDateString('es-AR')}</p>
           <div class="divider"></div>
           
-          ${sales.map((sale, index) => `
+          ${sales
+            .map(
+              (sale, index) => `
             <div class="ticket">
               <div class="flex">
                 <strong>Ticket #${index + 1}</strong>
-                <span>[${sale.time}]</span>
+                <span>[${sale.time || '--:--'}]</span>
               </div>
               <div style="font-size: 12px; margin-top: 4px;">
-                ${sale.items && sale.items.map(item => `
-                  <div class="flex">
-                    <span>${item.qty} ${item.isWeightBased ? 'kg' : 'un.'} ${item.name}</span>
-                    <span>$${(Number(item.price) * Number(item.qty)).toLocaleString('es-AR')}</span>
-                  </div>
-                `).join('')}
+                ${
+                  sale.items && sale.items.length > 0
+                    ? sale.items
+                        .map(
+                          (item) => `
+                      <div class="flex">
+                        <span>${item.qty} ${item.isWeightBased ? 'kg' : 'un.'} ${item.name}</span>
+                        <span>$${(Number(item.price || 0) * Number(item.qty || 0)).toLocaleString('es-AR')}</span>
+                      </div>
+                    `
+                        )
+                        .join('')
+                    : '<div>Venta general sin detalle</div>'
+                }
               </div>
               <div class="flex" style="font-size: 13px; font-weight: bold; margin-top: 4px;">
                 <span>Subtotal:</span>
-                <span>$${Number(sale.total).toLocaleString('es-AR')}</span>
+                <span>$${Number(sale.total || 0).toLocaleString('es-AR')}</span>
               </div>
             </div>
             <div class="divider"></div>
-          `).join('')}
+          `
+            )
+            .join('')}
 
           <div class="total">
             TOTAL CAJA HOY: $${totalDaySales.toLocaleString('es-AR')}
@@ -175,91 +188,122 @@ export default function DailySalesScreen() {
   };
 
   return (
-    <div className="p-4 sm:p-8 space-y-6 max-w-4xl mx-auto text-slate-100">
+    <div className="p-3.5 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-4xl mx-auto text-gray-100">
       
-      {/* Cabecera */}
-      <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xl">
-        <div>
-          <h1 className="text-2xl font-black uppercase tracking-wide text-slate-100 flex items-center gap-3">
-            <DollarSign className="w-7 h-7 text-emerald-400" /> Ventas del Día (Caja)
+      {/* Cabecera y Resumen de Caja */}
+      <div className="bg-gray-900/90 border border-gray-800 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xl backdrop-blur-sm">
+        <div className="space-y-1">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-100 flex items-center gap-2.5">
+            <DollarSign className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500 shrink-0" />
+            <span>Ventas del Día (Caja)</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-emerald-400" /> Registro automático de cobros en el POS (se reinicia a las 00:00 hs)
+          <p className="text-xs text-slate-400 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span>Registro de cobros locales (reinicio diario 00:00 hs)</span>
           </p>
         </div>
 
         {/* Tarjeta de Total Recaudado */}
-        <div className="bg-slate-950 border border-slate-800 px-5 py-3 rounded-2xl text-right">
-          <span className="text-[10px] text-slate-500 uppercase font-bold block">Total Recaudado Hoy</span>
-          <span className="text-2xl font-black text-emerald-400 font-mono">
+        <div className="w-full sm:w-auto bg-slate-950/80 border border-gray-800 px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl text-left sm:text-right">
+          <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+            Total Recaudado Hoy
+          </span>
+          <span className="text-xl sm:text-2xl font-black text-emerald-400 font-mono tracking-tight">
             ${totalDaySales.toLocaleString('es-AR')}
           </span>
         </div>
       </div>
 
-      {/* Listado y Botones de Acción (WhatsApp e Imprimir) */}
-      <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-3 border-b border-slate-800 gap-3">
-          <h2 className="text-sm font-black uppercase tracking-wide text-slate-200">Tickets Cobrados ({sales.length})</h2>
-          
-          <div className="flex items-center gap-2 flex-wrap">
+      {/* Listado y Acciones */}
+      <div className="bg-gray-900/90 border border-gray-800 p-4 sm:p-6 rounded-2xl sm:rounded-3xl space-y-4 shadow-xl backdrop-blur-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pb-3.5 border-b border-gray-800/80 gap-3">
+          <h2 className="text-xs sm:text-sm font-bold text-gray-200">
+            Tickets Cobrados ({sales.length})
+          </h2>
+
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
             <button
+              type="button"
               onClick={handlePrintReport}
               disabled={sales.length === 0}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-bold text-xs rounded-xl transition flex items-center gap-2 border border-slate-700 shadow-md"
+              className="py-2 px-3 bg-slate-800 hover:bg-slate-700 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-200 font-semibold text-xs rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-700/60"
             >
-              <Printer className="w-4 h-4" /> Imprimir Ventas
+              <Printer className="w-4 h-4 shrink-0 text-slate-300" />
+              <span className="truncate">Imprimir Ventas</span>
             </button>
 
             <button
+              type="button"
               onClick={sendWhatsAppReport}
               disabled={sales.length === 0}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold text-xs rounded-xl transition flex items-center gap-2 shadow-md"
+              className="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
             >
-              <Send className="w-4 h-4" /> Enviar a WhatsApp
+              <Send className="w-4 h-4 shrink-0" />
+              <span className="truncate">Enviar WhatsApp</span>
             </button>
           </div>
         </div>
 
-        <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
+        {/* Scroll de tickets */}
+        <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-800">
           {sales.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-2">
+            <div className="p-8 sm:p-12 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-2 border border-dashed border-gray-800/60 rounded-xl">
               <AlertCircle className="w-6 h-6 text-slate-600" />
               <span>Aún no se han registrado cobros en caja el día de hoy.</span>
             </div>
           ) : (
             sales.map((sale, index) => (
-              <div 
+              <div
                 key={sale.id}
-                className="bg-slate-950 border border-slate-800/80 p-4 rounded-2xl space-y-2 transition hover:border-slate-700"
+                className="bg-slate-950/70 border border-gray-800/80 p-3 sm:p-4 rounded-xl space-y-2.5 transition hover:border-gray-700"
               >
-                <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+                <div className="flex items-center justify-between border-b border-gray-800/70 pb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-emerald-400">Ticket #{index + 1}</span>
-                    <span className="text-[10px] text-slate-500 font-mono">({sale.time})</span>
+                    <span className="text-xs font-bold text-gray-200">
+                      Ticket #{index + 1}
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      ({sale.time || '--:--'})
+                    </span>
                   </div>
+
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-black text-emerald-400 font-mono">
-                      ${Number(sale.total).toLocaleString('es-AR')}
+                      ${Number(sale.total || 0).toLocaleString('es-AR')}
                     </span>
                     <button
+                      type="button"
                       onClick={() => handleDeleteSale(sale.id)}
-                      className="p-1 text-slate-500 hover:text-red-400 transition rounded-lg hover:bg-slate-900"
-                      title="Eliminar registro"
+                      className="p-1 text-slate-500 hover:text-red-400 rounded-lg hover:bg-slate-900 transition"
+                      title="Eliminar ticket"
+                      aria-label="Eliminar ticket"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* Detalle de productos dentro del ticket */}
-                <div className="space-y-1 pt-1">
-                  {sale.items && sale.items.map((item, idx) => (
-                    <div key={idx} className="text-[11px] text-slate-400 flex justify-between font-mono">
-                      <span>• {item.qty} {item.isWeightBased ? 'kg' : 'un.'} {item.name}</span>
-                      <span>${(Number(item.price) * Number(item.qty)).toLocaleString('es-AR')}</span>
-                    </div>
-                  ))}
+                {/* Detalle de ítems */}
+                <div className="space-y-1 pt-0.5">
+                  {sale.items && sale.items.length > 0 ? (
+                    sale.items.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="text-[11px] text-slate-400 flex justify-between font-mono leading-relaxed"
+                      >
+                        <span className="truncate pr-2">
+                          {item.qty} {item.isWeightBased ? 'kg' : 'un.'} {item.name}
+                        </span>
+                        <span className="shrink-0 text-slate-300">
+                          ${(Number(item.price || 0) * Number(item.qty || 0)).toLocaleString('es-AR')}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-[11px] text-slate-500 italic">
+                      Venta general sin detalle de ítems
+                    </span>
+                  )}
                 </div>
               </div>
             ))
