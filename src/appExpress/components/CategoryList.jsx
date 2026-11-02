@@ -133,7 +133,7 @@ export default function CategoryList({ storeId, branchId, onSelectCategory, sele
   };
 
   return (
-    <div className="w-full bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col h-auto min-h-[380px] lg:h-[75vh] shadow-xl backdrop-blur-sm">
+    <div className="w-full bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col h-auto min-h-35 lg:h-[75vh] shadow-xl backdrop-blur-sm">
       
       {/* Cabecera de Categorías */}
       <div className="flex items-center justify-between pb-3.5 border-b border-gray-800/80 mb-3.5">
@@ -177,9 +177,9 @@ export default function CategoryList({ storeId, branchId, onSelectCategory, sele
       </form>
 
       {/* Lista de Categorías */}
-      <div className="space-y-1.5 overflow-y-auto flex-1 pr-1 min-h-[140px] max-h-[260px] lg:max-h-none scrollbar-thin scrollbar-thumb-gray-800">
+      <div className="space-y-1.5 overflow-y-auto flex-1 pr-1 min-h-35 max-h-35 lg:max-h-none scrollbar-thin scrollbar-thumb-gray-800">
         {categories.length === 0 ? (
-          <div className="h-full min-h-[140px] flex items-center justify-center text-center p-4 border border-dashed border-gray-800/60 rounded-xl">
+          <div className="h-full min-h-35 flex items-center justify-center text-center p-4 border border-dashed border-gray-800/60 rounded-xl">
             <p className="text-xs text-slate-500">
               No hay categorías cargadas en esta sucursal.
             </p>

@@ -14,7 +14,7 @@ export default function CartSection({
   const isCartEmpty = cart.length === 0;
 
   return (
-    <div className="w-full lg:col-span-5 bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col h-auto min-h-[450px] lg:h-[75vh] shadow-xl backdrop-blur-sm">
+    <div className="w-full lg:col-span-5 bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col h-auto min-h-112.5 lg:h-[75vh] shadow-xl backdrop-blur-sm">
       
       {/* Cabecera del Carrito */}
       <div className="flex items-center justify-between pb-3.5 border-b border-gray-800/80 mb-3">
@@ -38,9 +38,9 @@ export default function CartSection({
       </div>
 
       {/* Lista de Ítems */}
-      <div className="overflow-y-auto flex-1 pr-1 space-y-2 mb-3 min-h-[160px] max-h-[300px] lg:max-h-none scrollbar-thin scrollbar-thumb-gray-800">
+      <div className="overflow-y-auto flex-1 pr-1 space-y-2 mb-3 min-h-40 max-h-75 lg:max-h-none scrollbar-thin scrollbar-thumb-gray-800">
         {isCartEmpty ? (
-          <div className="h-full min-h-[160px] flex flex-col items-center justify-center text-center p-4 text-xs text-slate-500 space-y-2 border border-dashed border-gray-800/60 rounded-xl">
+          <div className="h-full min-h-40 flex flex-col items-center justify-center text-center p-4 text-xs text-slate-500 space-y-2 border border-dashed border-gray-800/60 rounded-xl">
             <ShoppingCart className="w-8 h-8 text-slate-700" />
             <p>El carrito está vacío.<br />Escanea o agrega productos desde el catálogo.</p>
           </div>
@@ -70,7 +70,7 @@ export default function CartSection({
                   <Minus className="w-3.5 h-3.5" />
                 </button>
 
-                <span className="text-xs font-bold font-mono min-w-[20px] text-center text-gray-100">
+                <span className="text-xs font-bold font-mono min-w-5 text-center text-gray-100">
                   {item.qty}
                 </span>
 

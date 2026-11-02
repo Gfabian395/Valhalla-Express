@@ -248,7 +248,7 @@ export default function SettingsStore() {
             <span className="text-[10px] text-slate-400 uppercase font-bold block">
               ID de Comercio
             </span>
-            <span className="text-xs font-mono text-slate-200 font-semibold truncate max-w-[190px] sm:max-w-48 block">
+            <span className="text-xs font-mono text-slate-200 font-semibold truncate max-w-47.5 sm:max-w-48 block">
               {storeId || '---'}
             </span>
           </div>

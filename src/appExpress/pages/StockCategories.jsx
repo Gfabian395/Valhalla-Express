@@ -343,7 +343,7 @@ export default function StockCategories() {
         </div>
 
         {/* Columna Productos y Stock */}
-        <div className="lg:col-span-8 w-full bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col h-auto min-h-[480px] lg:h-[75vh] shadow-xl backdrop-blur-sm">
+        <div className="lg:col-span-8 w-full bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col h-auto min-h-35 lg:h-[75vh] shadow-xl backdrop-blur-sm">
           
           {/* Cabecera de Categoría Seleccionada */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3.5 border-b border-gray-800/80 mb-4">
@@ -453,13 +453,13 @@ export default function StockCategories() {
           )}
 
           {/* Listado de Productos */}
-          <div className="overflow-y-auto flex-1 pr-1 min-h-[160px] scrollbar-thin scrollbar-thumb-gray-800">
+          <div className="overflow-y-auto flex-1 pr-1 min-h-35 scrollbar-thin scrollbar-thumb-gray-800">
             {!selectedCategoryId ? (
-              <div className="h-full min-h-[160px] flex items-center justify-center text-xs text-slate-500 border border-dashed border-gray-800/60 rounded-xl p-4">
+              <div className="h-full min-h-35 flex items-center justify-center text-xs text-slate-500 border border-dashed border-gray-800/60 rounded-xl p-4">
                 Esperando selección de categoría...
               </div>
             ) : products.length === 0 ? (
-              <div className="h-full min-h-[160px] flex items-center justify-center text-xs text-slate-500 border border-dashed border-gray-800/60 rounded-xl p-4">
+              <div className="h-full min-h-35 flex items-center justify-center text-xs text-slate-500 border border-dashed border-gray-800/60 rounded-xl p-4">
                 No hay productos cargados en esta categoría para esta sucursal.
               </div>
             ) : (

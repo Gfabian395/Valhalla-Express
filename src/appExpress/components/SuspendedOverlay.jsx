@@ -26,7 +26,7 @@ export default function SuspendedOverlay({ storeId }) {
         <div className="bg-slate-950/80 p-3.5 sm:p-4 rounded-xl border border-gray-800 text-left font-mono text-xs text-slate-400 space-y-1.5">
           <div className="flex justify-between items-center">
             <span>ID de Comercio:</span>
-            <span className="text-slate-200 font-semibold truncate max-w-[190px] sm:max-w-none">
+            <span className="text-slate-200 font-semibold truncate max-w-47.5 sm:max-w-none">
               {storeId || '---'}
             </span>
           </div>

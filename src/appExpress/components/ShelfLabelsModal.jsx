@@ -75,7 +75,7 @@ export default function ShelfLabelsModal({ products = [], onClose }) {
               {products.map((prod) => (
                 <div 
                   key={prod.id} 
-                  className="print-label-card bg-white text-slate-950 p-2.5 rounded-lg border border-dashed border-slate-300 flex flex-col justify-between shadow-sm min-h-[95px]"
+                  className="print-label-card bg-white text-slate-950 p-2.5 rounded-lg border border-dashed border-slate-300 flex flex-col justify-between shadow-sm min-h-24"
                 >
                   <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-1">
                     <span className="truncate pr-1">{prod.categoryName || 'Comercio'}</span>

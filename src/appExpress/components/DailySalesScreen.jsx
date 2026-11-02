@@ -245,7 +245,7 @@ export default function DailySalesScreen() {
         </div>
 
         {/* Scroll de tickets */}
-        <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-800">
+        <div className="space-y-2.5 max-h-75 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-800">
           {sales.length === 0 ? (
             <div className="p-8 sm:p-12 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-2 border border-dashed border-gray-800/60 rounded-xl">
               <AlertCircle className="w-6 h-6 text-slate-600" />

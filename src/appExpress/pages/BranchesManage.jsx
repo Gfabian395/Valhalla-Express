@@ -244,7 +244,7 @@ export default function BranchesManage() {
             Tus Locales Activos
           </h2>
 
-          <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-800">
+          <div className="space-y-2.5 max-h-35 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-800">
             {/* Sucursal Principal */}
             <div className="bg-slate-950/70 border border-gray-800/80 p-3 sm:p-4 rounded-xl flex items-center justify-between gap-3">
               <div className="min-w-0 space-y-0.5">

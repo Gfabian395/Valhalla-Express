@@ -102,7 +102,7 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
   };
 
   return (
-    <div className="w-full bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col h-auto min-h-[460px] lg:h-[75vh] shadow-xl backdrop-blur-sm">
+    <div className="w-full bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col h-auto min-h-35 lg:h-[75vh] shadow-xl backdrop-blur-sm">
       
       {/* Cabecera y Contadores */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3.5 border-b border-gray-800/80 mb-4">
@@ -186,13 +186,13 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
       )}
 
       {/* Contenedor de Productos: Cards en Mobile, Tabla en Desktop */}
-      <div className="overflow-y-auto flex-1 pr-1 min-h-[160px] scrollbar-thin scrollbar-thumb-gray-800">
+      <div className="overflow-y-auto flex-1 pr-1 min-h-40 scrollbar-thin scrollbar-thumb-gray-800">
         {!categoryId ? (
-          <div className="h-full min-h-[160px] flex items-center justify-center text-xs text-slate-500 border border-dashed border-gray-800/60 rounded-xl p-4">
+          <div className="h-full min-h-40 flex items-center justify-center text-xs text-slate-500 border border-dashed border-gray-800/60 rounded-xl p-4">
             Esperando selección de categoría...
           </div>
         ) : products.length === 0 ? (
-          <div className="h-full min-h-[160px] flex items-center justify-center text-xs text-slate-500 border border-dashed border-gray-800/60 rounded-xl p-4">
+          <div className="h-full min-h-40 flex items-center justify-center text-xs text-slate-500 border border-dashed border-gray-800/60 rounded-xl p-4">
             No hay productos cargados en esta categoría.
           </div>
         ) : (

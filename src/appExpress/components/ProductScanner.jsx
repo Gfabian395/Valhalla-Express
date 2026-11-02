@@ -7,7 +7,7 @@ export default function ProductScanner({
   allProductsCount = 0
 }) {
   return (
-    <div className="w-full lg:col-span-7 bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col justify-center min-h-[380px] lg:h-[75vh] shadow-xl backdrop-blur-sm">
+    <div className="w-full lg:col-span-7 bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col justify-center min-h-35 lg:h-[75vh] shadow-xl backdrop-blur-sm">
       
       <div className="max-w-md mx-auto w-full space-y-4 sm:space-y-6 text-center">
         
