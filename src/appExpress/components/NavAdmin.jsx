@@ -15,11 +15,13 @@ export default function NavAdmin() {
     let isMounted = true;
     const fetchStoreName = async () => {
       try {
-        const storeRef = doc(db, 'stores', storeId);
+        // Consultar directamente en la colección 'comercios'
+        const storeRef = doc(db, 'comercios', storeId);
         const storeSnap = await getDoc(storeRef);
         if (isMounted) {
-          if (storeSnap.exists() && storeSnap.data().name) {
-            setStoreName(storeSnap.data().name);
+          if (storeSnap.exists()) {
+            const data = storeSnap.data();
+            setStoreName(data.name || data.nombreLocal || 'Mi Supermercado');
           } else {
             setStoreName('Mi Supermercado');
           }
@@ -66,33 +68,33 @@ export default function NavAdmin() {
   };
 
   const linkClass = ({ isActive }) =>
-    `flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+    `flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
       isActive
-        ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
-        : 'text-slate-400 hover:text-gray-100 hover:bg-slate-800/60'
+        ? 'bg-green-600 text-white font-bold shadow-sm'
+        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
     }`;
 
   const mobileLinkClass = ({ isActive }) =>
     `flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
       isActive
-        ? 'bg-emerald-500 text-slate-950 font-bold'
-        : 'bg-slate-950/60 text-slate-300 hover:bg-slate-900 border border-gray-800/80'
+        ? 'bg-green-600 text-white font-bold'
+        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
     }`;
 
   return (
-    <header className="bg-gray-950/95 backdrop-blur-md border-b border-gray-800/80 px-3.5 sm:px-6 py-2.5 sm:py-3 sticky top-0 z-50">
+    <header className="bg-white/95 backdrop-blur-md border-b border-gray-200 px-3.5 sm:px-6 py-2.5 sm:py-3 sticky top-0 z-50 shadow-xs">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
         
         {/* Identidad del Comercio */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-slate-900 border border-gray-800 rounded-xl flex items-center justify-center text-emerald-400 shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-green-50 border border-green-200 rounded-xl flex items-center justify-center text-green-600 shrink-0">
             <Building2 className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-gray-100 text-sm sm:text-base font-bold tracking-tight block truncate leading-tight">
+            <span className="text-gray-900 text-sm sm:text-base font-bold tracking-tight block truncate leading-tight">
               {storeName}
             </span>
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
+            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">
               Multi-Comercio
             </span>
           </div>
@@ -100,7 +102,7 @@ export default function NavAdmin() {
 
         {/* Navegación Desktop */}
         <div className="hidden lg:flex items-center gap-2">
-          <nav className="flex items-center gap-1 bg-slate-900/80 border border-gray-800 p-1 rounded-2xl">
+          <nav className="flex items-center gap-1 bg-gray-50 border border-gray-200 p-1 rounded-2xl">
             <NavLink to="/express/pos" className={linkClass}>
               <ShoppingCart className="w-4 h-4" />
               <span>Caja</span>
@@ -127,15 +129,15 @@ export default function NavAdmin() {
             </NavLink>
           </nav>
 
-          <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-gray-800">
+          <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-gray-200">
             <button
               type="button"
               onClick={handleShareCatalog}
               disabled={!storeId}
-              className="px-3 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none text-slate-300 border border-gray-800 text-xs font-semibold rounded-xl transition flex items-center gap-1.5"
+              className="px-3 py-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-40 disabled:pointer-events-none text-gray-700 border border-gray-200 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 cursor-pointer"
               title="Copiar URL del catálogo para WhatsApp"
             >
-              <Share2 className="w-4 h-4 text-emerald-400" />
+              <Share2 className="w-4 h-4 text-green-600" />
               <span>Compartir</span>
             </button>
 
@@ -143,7 +145,7 @@ export default function NavAdmin() {
               type="button"
               onClick={handleOpenCatalog}
               disabled={!storeId}
-              className="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-950 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-emerald-500/20"
+              className="px-3 py-2 bg-green-600 hover:bg-green-700 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer"
               title="Abrir catálogo público en una pestaña nueva"
             >
               <ExternalLink className="w-4 h-4" />
@@ -157,10 +159,10 @@ export default function NavAdmin() {
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 bg-slate-900 border border-gray-800 text-slate-200 hover:text-emerald-400 rounded-xl transition"
+            className="p-2 bg-gray-50 border border-gray-200 text-gray-700 hover:text-green-600 rounded-xl transition cursor-pointer"
             aria-label="Abrir menú de navegación"
           >
-            {isMobileMenuOpen ? <X className="w-5 h-5 text-emerald-400" /> : <Menu className="w-5 h-5" />}
+            {isMobileMenuOpen ? <X className="w-5 h-5 text-green-600" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
 
@@ -168,7 +170,7 @@ export default function NavAdmin() {
 
       {/* Menú Desplegable Móvil */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden mt-3 pt-3 border-t border-gray-800/80 space-y-3">
+        <div className="lg:hidden mt-3 pt-3 border-t border-gray-200 space-y-3">
           <nav className="flex flex-col gap-1.5">
             <NavLink
               to="/express/pos"
@@ -216,14 +218,14 @@ export default function NavAdmin() {
             </NavLink>
           </nav>
 
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-800/80">
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200">
             <button
               type="button"
               onClick={handleShareCatalog}
               disabled={!storeId}
-              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-200 border border-gray-800 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 bg-gray-50 hover:bg-gray-100 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-gray-700 border border-gray-200 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <Share2 className="w-4 h-4 text-emerald-400" />
+              <Share2 className="w-4 h-4 text-green-600" />
               <span>Compartir</span>
             </button>
 
@@ -231,7 +233,7 @@ export default function NavAdmin() {
               type="button"
               onClick={handleOpenCatalog}
               disabled={!storeId}
-              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-950 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20"
+              className="w-full py-2.5 bg-green-600 hover:bg-green-700 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
             >
               <ExternalLink className="w-4 h-4" />
               <span>Ver catálogo</span>

@@ -14,12 +14,12 @@ export default function DailySalesScreen() {
     return today.toISOString().split('T')[0];
   };
 
-  // Cargar el teléfono y el nombre del comercio desde Firestore
+  // Cargar el teléfono y el nombre del comercio desde la colección unificada 'comercios'
   useEffect(() => {
     if (!storeId) return;
     const fetchStoreData = async () => {
       try {
-        const storeRef = doc(db, 'stores', storeId);
+        const storeRef = doc(db, 'comercios', storeId);
         const storeSnap = await getDoc(storeRef);
         if (storeSnap.exists()) {
           const data = storeSnap.data();
@@ -38,7 +38,7 @@ export default function DailySalesScreen() {
     fetchStoreData();
   }, [storeId]);
 
-  // Cargar las ventas del día desde el localStorage
+  // Cargar las ventas del día desde el localStorage de forma local
   useEffect(() => {
     const savedDate = localStorage.getItem('valhalla_sales_date');
     const savedSales = localStorage.getItem('valhalla_daily_sales');
@@ -109,7 +109,7 @@ export default function DailySalesScreen() {
     window.open(url, '_blank');
   };
 
-  // Imprimir informe detallado
+  // Imprimir informe detallado localmente
   const handlePrintReport = () => {
     if (sales.length === 0) {
       alert('No hay ventas para imprimir en el día de hoy.');
@@ -188,36 +188,36 @@ export default function DailySalesScreen() {
   };
 
   return (
-    <div className="p-3.5 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-4xl mx-auto text-gray-100">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto text-gray-800">
       
       {/* Cabecera y Resumen de Caja */}
-      <div className="bg-gray-900/90 border border-gray-800 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xl backdrop-blur-sm">
+      <div className="bg-white border border-gray-200 p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-100 flex items-center gap-2.5">
-            <DollarSign className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500 shrink-0" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2.5">
+            <DollarSign className="w-7 h-7 text-green-600 shrink-0" />
             <span>Ventas del Día (Caja)</span>
           </h1>
-          <p className="text-xs text-slate-400 flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-            <span>Registro de cobros locales (reinicio diario 00:00 hs)</span>
+          <p className="text-xs text-gray-500 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-green-600 shrink-0" />
+            <span>Registro local en navegador (reinicio automático diario)</span>
           </p>
         </div>
 
         {/* Tarjeta de Total Recaudado */}
-        <div className="w-full sm:w-auto bg-slate-950/80 border border-gray-800 px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl text-left sm:text-right">
-          <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+        <div className="w-full sm:w-auto bg-gray-50 border border-gray-200 px-5 py-3 rounded-2xl text-left sm:text-right">
+          <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">
             Total Recaudado Hoy
           </span>
-          <span className="text-xl sm:text-2xl font-black text-emerald-400 font-mono tracking-tight">
+          <span className="text-xl sm:text-2xl font-black text-green-600 font-mono tracking-tight">
             ${totalDaySales.toLocaleString('es-AR')}
           </span>
         </div>
       </div>
 
       {/* Listado y Acciones */}
-      <div className="bg-gray-900/90 border border-gray-800 p-4 sm:p-6 rounded-2xl sm:rounded-3xl space-y-4 shadow-xl backdrop-blur-sm">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pb-3.5 border-b border-gray-800/80 gap-3">
-          <h2 className="text-xs sm:text-sm font-bold text-gray-200">
+      <div className="bg-white border border-gray-200 p-6 rounded-3xl space-y-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pb-3.5 border-b border-gray-100 gap-3">
+          <h2 className="text-sm font-bold text-gray-900">
             Tickets Cobrados ({sales.length})
           </h2>
 
@@ -226,9 +226,9 @@ export default function DailySalesScreen() {
               type="button"
               onClick={handlePrintReport}
               disabled={sales.length === 0}
-              className="py-2 px-3 bg-slate-800 hover:bg-slate-700 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-200 font-semibold text-xs rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-700/60"
+              className="py-2.5 px-3 bg-gray-100 hover:bg-gray-200 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-gray-700 font-semibold text-xs rounded-xl transition flex items-center justify-center gap-1.5 border border-gray-200 cursor-pointer"
             >
-              <Printer className="w-4 h-4 shrink-0 text-slate-300" />
+              <Printer className="w-4 h-4 shrink-0 text-gray-500" />
               <span className="truncate">Imprimir Ventas</span>
             </button>
 
@@ -236,7 +236,7 @@ export default function DailySalesScreen() {
               type="button"
               onClick={sendWhatsAppReport}
               disabled={sales.length === 0}
-              className="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
+              className="py-2.5 px-3 bg-green-600 hover:bg-green-700 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
             >
               <Send className="w-4 h-4 shrink-0" />
               <span className="truncate">Enviar WhatsApp</span>
@@ -245,36 +245,36 @@ export default function DailySalesScreen() {
         </div>
 
         {/* Scroll de tickets */}
-        <div className="space-y-2.5 max-h-75 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-800">
+        <div className="space-y-3 max-h-75 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-200">
           {sales.length === 0 ? (
-            <div className="p-8 sm:p-12 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-2 border border-dashed border-gray-800/60 rounded-xl">
-              <AlertCircle className="w-6 h-6 text-slate-600" />
+            <div className="p-8 sm:p-12 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-2 border border-dashed border-gray-200 rounded-2xl">
+              <AlertCircle className="w-6 h-6 text-gray-300" />
               <span>Aún no se han registrado cobros en caja el día de hoy.</span>
             </div>
           ) : (
             sales.map((sale, index) => (
               <div
                 key={sale.id}
-                className="bg-slate-950/70 border border-gray-800/80 p-3 sm:p-4 rounded-xl space-y-2.5 transition hover:border-gray-700"
+                className="bg-gray-50 border border-gray-200/80 p-4 rounded-2xl space-y-2.5 transition hover:border-gray-300"
               >
-                <div className="flex items-center justify-between border-b border-gray-800/70 pb-2">
+                <div className="flex items-center justify-between border-b border-gray-200/60 pb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-200">
+                    <span className="text-xs font-bold text-gray-900">
                       Ticket #{index + 1}
                     </span>
-                    <span className="text-[11px] text-slate-500 font-mono">
+                    <span className="text-[11px] text-gray-400 font-mono">
                       ({sale.time || '--:--'})
                     </span>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-black text-emerald-400 font-mono">
+                    <span className="text-sm font-black text-green-600 font-mono">
                       ${Number(sale.total || 0).toLocaleString('es-AR')}
                     </span>
                     <button
                       type="button"
                       onClick={() => handleDeleteSale(sale.id)}
-                      className="p-1 text-slate-500 hover:text-red-400 rounded-lg hover:bg-slate-900 transition"
+                      className="p-1 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-200/60 transition cursor-pointer"
                       title="Eliminar ticket"
                       aria-label="Eliminar ticket"
                     >
@@ -289,18 +289,18 @@ export default function DailySalesScreen() {
                     sale.items.map((item, idx) => (
                       <div
                         key={idx}
-                        className="text-[11px] text-slate-400 flex justify-between font-mono leading-relaxed"
+                        className="text-[11px] text-gray-600 flex justify-between font-mono leading-relaxed"
                       >
                         <span className="truncate pr-2">
                           {item.qty} {item.isWeightBased ? 'kg' : 'un.'} {item.name}
                         </span>
-                        <span className="shrink-0 text-slate-300">
+                        <span className="shrink-0 text-gray-900 font-medium">
                           ${(Number(item.price || 0) * Number(item.qty || 0)).toLocaleString('es-AR')}
                         </span>
                       </div>
                     ))
                   ) : (
-                    <span className="text-[11px] text-slate-500 italic">
+                    <span className="text-[11px] text-gray-400 italic">
                       Venta general sin detalle de ítems
                     </span>
                   )}

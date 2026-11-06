@@ -10,9 +10,6 @@ export default function PosScreen() {
   const storeId = auth.currentUser ? auth.currentUser.uid : null;
   const navigate = useNavigate();
 
-  const [branches, setBranches] = useState([]);
-  const [selectedBranchId, setSelectedBranchId] = useState('main');
-
   const [allProducts, setAllProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState([]);
@@ -31,81 +28,47 @@ export default function PosScreen() {
   const [weightInput, setWeightInput] = useState(''); 
   const [weightUnit, setWeightUnit] = useState('grams');
 
+  // Cargar todos los productos del comercio unificado en 'comercios'
   useEffect(() => {
     if (!storeId) return;
-    const fetchBranches = async () => {
-      try {
-        const snap = await getDocs(collection(db, 'stores', storeId, 'branches'));
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setBranches(list);
-      } catch (error) {
-        console.error('Error al cargar sucursales:', error);
-      }
-    };
-    fetchBranches();
-  }, [storeId]);
-
-  useEffect(() => {
-    if (!storeId) return;
-    const fetchProductsByBranch = async () => {
+    const fetchProducts = async () => {
       try {
         let productsList = [];
+        const catSnap = await getDocs(collection(db, 'comercios', storeId, 'categories'));
         
-        if (selectedBranchId === 'main') {
-          const catSnap = await getDocs(collection(db, 'stores', storeId, 'categories'));
-          for (const catDoc of catSnap.docs) {
-            const prodSnap = await getDocs(collection(db, 'stores', storeId, 'categories', catDoc.id, 'products'));
-            prodSnap.forEach(prodDoc => {
-              const data = prodDoc.data();
-              productsList.push({ 
-                id: prodDoc.id, 
-                branchId: 'main',
-                categoryId: catDoc.id, 
-                name: data.name || 'Sin nombre',
-                price: Number(data.price) || 0,
-                stock: Number(data.stock) || 0,
-                sku: data.sku ? String(data.sku).trim() : '---',
-                isWeightBased: data.isWeightBased || false
-              });
+        for (const catDoc of catSnap.docs) {
+          const prodSnap = await getDocs(collection(db, 'comercios', storeId, 'categories', catDoc.id, 'products'));
+          prodSnap.forEach(prodDoc => {
+            const data = prodDoc.data();
+            productsList.push({ 
+              id: prodDoc.id, 
+              categoryId: catDoc.id, 
+              name: data.name || 'Sin nombre',
+              price: Number(data.price) || 0,
+              stock: Number(data.stock) || 0,
+              sku: data.sku ? String(data.sku).trim() : '---',
+              isWeightBased: data.isWeightBased || false
             });
-          }
-        } else {
-          const catSnap = await getDocs(collection(db, 'stores', storeId, 'branches', selectedBranchId, 'categories'));
-          for (const catDoc of catSnap.docs) {
-            const prodSnap = await getDocs(collection(db, 'stores', storeId, 'branches', selectedBranchId, 'categories', catDoc.id, 'products'));
-            prodSnap.forEach(prodDoc => {
-              const data = prodDoc.data();
-              productsList.push({ 
-                id: prodDoc.id, 
-                branchId: selectedBranchId,
-                categoryId: catDoc.id, 
-                name: data.name || 'Sin nombre',
-                price: Number(data.price) || 0,
-                stock: Number(data.stock) || 0,
-                sku: data.sku ? String(data.sku).trim() : '---',
-                isWeightBased: data.isWeightBased || false
-              });
-            });
-          }
+          });
         }
         
         setAllProducts(productsList);
-        setCart([]);
       } catch (error) {
-        console.error('Error al cargar productos de la sucursal:', error);
+        console.error('Error al cargar productos del comercio:', error);
       }
     };
-    fetchProductsByBranch();
-  }, [storeId, selectedBranchId, successMsg]);
+    fetchProducts();
+  }, [storeId, successMsg]);
 
+  // Cargar tickets pendientes y clientes desde 'comercios'
   useEffect(() => {
     if (!storeId) return;
     const fetchData = async () => {
       try {
-        const ticketsSnap = await getDocs(collection(db, 'stores', storeId, 'pendingTickets'));
+        const ticketsSnap = await getDocs(collection(db, 'comercios', storeId, 'pendingTickets'));
         setPendingTickets(ticketsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-        const custSnap = await getDocs(collection(db, 'stores', storeId, 'customers'));
+        const custSnap = await getDocs(collection(db, 'comercios', storeId, 'customers'));
         setCustomersList(custSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (error) {
         console.error('Error al cargar datos auxiliares:', error);
@@ -135,7 +98,7 @@ export default function PosScreen() {
       const currentQtyInCart = existing ? existing.qty : 0;
 
       if (!product.isWeightBased && currentQtyInCart + quantity > cleanStock) {
-        alert('No hay suficiente stock disponible para este producto en esta sucursal.');
+        alert('No hay suficiente stock disponible para este producto.');
         return cartArray;
       }
 
@@ -178,17 +141,9 @@ export default function PosScreen() {
 
       if (!foundProduct && storeId) {
         try {
-          const categoriesPath = selectedBranchId === 'main' 
-            ? collection(db, 'stores', storeId, 'categories')
-            : collection(db, 'stores', storeId, 'branches', selectedBranchId, 'categories');
-
-          const catSnap = await getDocs(categoriesPath);
+          const catSnap = await getDocs(collection(db, 'comercios', storeId, 'categories'));
           for (const catDoc of catSnap.docs) {
-            const productsPath = selectedBranchId === 'main'
-              ? collection(db, 'stores', storeId, 'categories', catDoc.id, 'products')
-              : collection(db, 'stores', storeId, 'branches', selectedBranchId, 'categories', catDoc.id, 'products');
-
-            const prodSnap = await getDocs(productsPath);
+            const prodSnap = await getDocs(collection(db, 'comercios', storeId, 'categories', catDoc.id, 'products'));
             prodSnap.forEach(prodDoc => {
               const data = prodDoc.data();
               const pSku = data.sku ? String(data.sku).trim().toLowerCase() : '';
@@ -196,7 +151,6 @@ export default function PosScreen() {
               if (pSku === query || pName.includes(query)) {
                 foundProduct = { 
                   id: prodDoc.id, 
-                  branchId: selectedBranchId,
                   categoryId: catDoc.id, 
                   name: data.name || 'Sin nombre',
                   price: Number(data.price) || 0,
@@ -216,7 +170,7 @@ export default function PosScreen() {
         handleProductSelection(foundProduct);
         setSearchTerm('');
       } else {
-        alert('Producto no encontrado con ese código o nombre en esta sucursal.');
+        alert('Producto no encontrado con ese código o nombre.');
         setSearchTerm('');
       }
     }
@@ -249,13 +203,12 @@ export default function PosScreen() {
     try {
       const ticketData = {
         name: ticketName.trim() || `Cliente (${new Date().toLocaleTimeString()})`,
-        branchId: selectedBranchId,
         items: cart,
         total: cartTotal,
         createdAt: new Date().toISOString()
       };
 
-      const docRef = await addDoc(collection(db, 'stores', storeId, 'pendingTickets'), ticketData);
+      const docRef = await addDoc(collection(db, 'comercios', storeId, 'pendingTickets'), ticketData);
       setPendingTickets([...pendingTickets, { id: docRef.id, ...ticketData }]);
       setCart([]);
       setTicketName('');
@@ -267,13 +220,9 @@ export default function PosScreen() {
 
   const handleRestoreTicket = async (ticket) => {
     if (!storeId) return;
-    if (ticket.branchId && ticket.branchId !== selectedBranchId) {
-      alert('Este ticket pertenece a otra sucursal. Cambia de sucursal para recuperarlo.');
-      return;
-    }
     setCart(ticket.items);
     try {
-      await deleteDoc(doc(db, 'stores', storeId, 'pendingTickets', ticket.id));
+      await deleteDoc(doc(db, 'comercios', storeId, 'pendingTickets', ticket.id));
       setPendingTickets(pendingTickets.filter(t => t.id !== ticket.id));
     } catch (error) {
       console.error('Error al eliminar ticket pendiente:', error);
@@ -292,12 +241,7 @@ export default function PosScreen() {
 
     try {
       for (const item of cart) {
-        let productRef;
-        if (selectedBranchId === 'main') {
-          productRef = doc(db, 'stores', storeId, 'categories', item.categoryId, 'products', item.id);
-        } else {
-          productRef = doc(db, 'stores', storeId, 'branches', selectedBranchId, 'categories', item.categoryId, 'products', item.id);
-        }
+        const productRef = doc(db, 'comercios', storeId, 'categories', item.categoryId, 'products', item.id);
 
         if (!item.isWeightBased) {
           const newStock = Math.max(0, Number((item.stock - item.qty).toFixed(3)));
@@ -327,7 +271,7 @@ export default function PosScreen() {
       currentSales.push(newSaleRecord);
       localStorage.setItem('valhalla_daily_sales', JSON.stringify(currentSales));
 
-      setSuccessMsg('¡Venta cobrada con éxito y stock actualizado en la sucursal!');
+      setSuccessMsg('¡Venta cobrada con éxito y stock actualizado!');
       setCart([]);
       setCashGiven('');
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -347,7 +291,7 @@ export default function PosScreen() {
     const currentTotal = cartTotal;
 
     try {
-      const customerRef = doc(db, 'stores', storeId, 'customers', selectedCustomerId);
+      const customerRef = doc(db, 'comercios', storeId, 'customers', selectedCustomerId);
       const customerSnap = await getDoc(customerRef);
 
       if (!customerSnap.exists()) {
@@ -359,12 +303,7 @@ export default function PosScreen() {
       await updateDoc(customerRef, { debt: currentDebt + currentTotal });
 
       for (const item of cart) {
-        let productRef;
-        if (selectedBranchId === 'main') {
-          productRef = doc(db, 'stores', storeId, 'categories', item.categoryId, 'products', item.id);
-        } else {
-          productRef = doc(db, 'stores', storeId, 'branches', selectedBranchId, 'categories', item.categoryId, 'products', item.id);
-        }
+        const productRef = doc(db, 'comercios', storeId, 'categories', item.categoryId, 'products', item.id);
 
         if (!item.isWeightBased) {
           const newStock = Math.max(0, Number((item.stock - item.qty).toFixed(3)));
@@ -421,20 +360,20 @@ export default function PosScreen() {
   };
 
   return (
-    <div className="p-3.5 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl mx-auto text-gray-100">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-gray-800">
       
-      {/* Barra Superior de Control de Sucursal y Acciones */}
-      <div className="bg-gray-900/90 border border-gray-800 p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 shadow-xl backdrop-blur-sm">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-slate-950 border border-gray-800 rounded-xl flex items-center justify-center text-emerald-400 shrink-0">
+      {/* Barra Superior de Control y Acciones */}
+      <div className="bg-white border border-gray-200 p-4 rounded-3xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-center text-green-600 shrink-0">
             <Building2 className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-xs sm:text-sm font-bold text-gray-100 tracking-tight leading-tight">
+            <h2 className="text-sm font-bold text-gray-900 tracking-tight leading-tight">
               Punto de Venta (Caja)
             </h2>
-            <p className="text-[11px] text-emerald-400 font-medium">
-              Operando en sucursal activa
+            <p className="text-[11px] text-green-600 font-medium">
+              Comercio Activo
             </p>
           </div>
         </div>
@@ -444,10 +383,10 @@ export default function PosScreen() {
           <button
             type="button"
             onClick={() => navigate('/express/ventas-dia')}
-            className="py-2 px-3 bg-slate-950/80 hover:bg-slate-800 border border-gray-800 text-slate-300 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
+            className="py-2.5 px-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
             title="Ver ventas del día"
           >
-            <DollarSign className="w-4 h-4 text-emerald-400 shrink-0" />
+            <DollarSign className="w-4 h-4 text-green-600 shrink-0" />
             <span className="truncate">Ventas del Día</span>
           </button>
 
@@ -455,41 +394,25 @@ export default function PosScreen() {
             type="button"
             onClick={handleShareCatalog}
             disabled={!storeId}
-            className="py-2 px-3 bg-emerald-500 hover:bg-emerald-400 active:scale-95 disabled:opacity-40 text-slate-950 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20"
+            className="py-2.5 px-3 bg-green-600 hover:bg-green-700 active:scale-95 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
             title="Copiar enlace del catálogo"
           >
             <Share2 className="w-4 h-4 shrink-0" />
             <span className="truncate">Compartir Catálogo</span>
           </button>
-
-          <div className="col-span-2 sm:col-span-1 flex items-center gap-1.5 bg-slate-950/80 border border-gray-800 rounded-xl px-2.5 py-1">
-            <span className="text-[10px] uppercase font-bold text-slate-400 shrink-0">Local:</span>
-            <select
-              value={selectedBranchId}
-              onChange={e => setSelectedBranchId(e.target.value)}
-              className="w-full sm:w-auto bg-transparent text-xs font-semibold text-gray-100 focus:outline-none cursor-pointer py-1"
-            >
-              <option value="main" className="bg-slate-900 text-gray-100">Sucursal Principal</option>
-              {branches.map(branch => (
-                <option key={branch.id} value={branch.id} className="bg-slate-900 text-gray-100">
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
       </div>
 
       {/* Banner de Confirmación */}
       {successMsg && (
-        <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl sm:rounded-2xl text-emerald-400 text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-lg shadow-emerald-500/10">
-          <CheckCircle2 className="w-5 h-5 shrink-0" />
+        <div className="p-3.5 bg-green-50 border border-green-200 rounded-2xl text-green-800 text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-xs">
+          <CheckCircle2 className="w-5 h-5 shrink-0 text-green-600" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {/* Grilla Principal: Escáner y Carrito */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <ProductScanner
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -513,16 +436,16 @@ export default function PosScreen() {
       {/* Modal: Producto por Peso */}
       {showWeightModal && weightProduct && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-gray-900 border border-gray-800 text-gray-100 rounded-t-2xl sm:rounded-3xl p-5 sm:p-6 max-w-sm w-full relative shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-800">
-              <h3 className="text-sm font-bold text-gray-100 flex items-center gap-2">
-                <Scale className="w-4 h-4 text-emerald-400" />
+          <div className="bg-white border border-gray-200 text-gray-900 rounded-t-3xl sm:rounded-3xl p-6 max-w-sm w-full relative shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <Scale className="w-4 h-4 text-green-600" />
                 <span>Producto por Kilo</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setShowWeightModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+                className="text-gray-400 hover:text-gray-900 p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer"
                 aria-label="Cerrar modal"
               >
                 <X className="w-4 h-4" />
@@ -531,14 +454,14 @@ export default function PosScreen() {
 
             <div className="space-y-3">
               <div>
-                <h4 className="text-sm font-semibold text-gray-100">{weightProduct.name}</h4>
-                <p className="text-xs text-emerald-400 font-mono mt-0.5">
+                <h4 className="text-sm font-semibold text-gray-900">{weightProduct.name}</h4>
+                <p className="text-xs text-green-600 font-mono mt-0.5">
                   Precio: ${Number(weightProduct.price).toLocaleString('es-AR')} /kg
                 </p>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-slate-400 block">
+                <label className="text-[10px] uppercase font-bold text-gray-500 block">
                   Cantidad a Pesar:
                 </label>
                 <div className="flex gap-2">
@@ -550,12 +473,12 @@ export default function PosScreen() {
                     value={weightInput}
                     onChange={e => setWeightInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleConfirmWeightSale(); }}
-                    className="flex-1 bg-slate-950 border border-gray-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-gray-100 font-mono focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-gray-900 font-mono focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 transition"
                   />
                   <select
                     value={weightUnit}
                     onChange={e => setWeightUnit(e.target.value)}
-                    className="bg-slate-950 border border-gray-800 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-300 focus:outline-none cursor-pointer"
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none cursor-pointer"
                   >
                     <option value="grams">Gramos (g)</option>
                     <option value="kg">Kilos (kg)</option>
@@ -564,9 +487,9 @@ export default function PosScreen() {
               </div>
 
               {weightInput && !isNaN(weightInput) && (
-                <div className="bg-slate-950/80 p-3 rounded-xl border border-gray-800 flex items-center justify-between">
-                  <span className="text-xs text-slate-400">Subtotal a cobrar:</span>
-                  <span className="text-sm font-bold text-emerald-400 font-mono">
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Subtotal a cobrar:</span>
+                  <span className="text-sm font-bold text-green-600 font-mono">
                     ${(Number(weightProduct.price) * (weightUnit === 'grams' ? Number(weightInput) / 1000 : Number(weightInput))).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -577,14 +500,14 @@ export default function PosScreen() {
               <button
                 type="button"
                 onClick={() => setShowWeightModal(false)}
-                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition"
+                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleConfirmWeightSale}
-                className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs rounded-xl transition shadow-md shadow-emerald-500/20"
+                className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold text-xs rounded-xl transition shadow-sm cursor-pointer"
               >
                 Agregar
               </button>
@@ -596,16 +519,16 @@ export default function PosScreen() {
       {/* Modal: Registrar Fiado */}
       {showCreditModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-gray-900 border border-gray-800 text-gray-100 rounded-t-2xl sm:rounded-3xl p-5 sm:p-6 max-w-md w-full relative shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-800">
-              <h3 className="text-sm sm:text-base font-bold text-amber-400 flex items-center gap-2">
+          <div className="bg-white border border-gray-200 text-gray-900 rounded-t-3xl sm:rounded-3xl p-6 max-w-md w-full relative shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="text-sm sm:text-base font-bold text-amber-600 flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 <span>Registrar Venta a Fiado</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setShowCreditModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+                className="text-gray-400 hover:text-gray-900 p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer"
                 aria-label="Cerrar modal"
               >
                 <X className="w-4 h-4" />
@@ -613,20 +536,20 @@ export default function PosScreen() {
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <p className="text-xs text-gray-500 leading-relaxed">
                 Selecciona el cliente a quien se le cargará el monto de{' '}
-                <strong className="text-emerald-400 font-mono font-bold">${cartTotal.toLocaleString('es-AR')}</strong>:
+                <strong className="text-green-600 font-mono font-bold">${cartTotal.toLocaleString('es-AR')}</strong>:
               </p>
 
               {customersList.length === 0 ? (
-                <div className="p-4 bg-slate-950 border border-dashed border-gray-800 rounded-xl text-center text-xs text-slate-500">
+                <div className="p-4 bg-gray-50 border border-dashed border-gray-200 rounded-2xl text-center text-xs text-gray-400">
                   No hay clientes registrados en la libreta de fiados.
                 </div>
               ) : (
                 <select
                   value={selectedCustomerId}
                   onChange={e => setSelectedCustomerId(e.target.value)}
-                  className="w-full bg-slate-950 border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-gray-100 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition cursor-pointer"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition cursor-pointer"
                 >
                   <option value="">-- Seleccionar Cliente --</option>
                   {customersList.map(c => (
@@ -642,7 +565,7 @@ export default function PosScreen() {
               <button
                 type="button"
                 onClick={() => setShowCreditModal(false)}
-                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition"
+                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition cursor-pointer"
               >
                 Cancelar
               </button>
@@ -650,7 +573,7 @@ export default function PosScreen() {
                 type="button"
                 onClick={handleCheckoutCredit}
                 disabled={!selectedCustomerId || cart.length === 0}
-                className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-950 font-bold text-xs rounded-xl transition"
+                className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-950 font-bold text-xs rounded-xl transition cursor-pointer"
               >
                 Confirmar Fiado
               </button>
@@ -662,16 +585,16 @@ export default function PosScreen() {
       {/* Modal: Cuentas en Espera */}
       {showPendingModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-gray-900 border border-gray-800 text-gray-100 rounded-t-2xl sm:rounded-3xl p-5 sm:p-6 max-w-lg w-full relative shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-800">
-              <h3 className="text-sm sm:text-base font-bold text-amber-400 flex items-center gap-2">
+          <div className="bg-white border border-gray-200 text-gray-900 rounded-t-3xl sm:rounded-3xl p-6 max-w-lg w-full relative shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="text-sm sm:text-base font-bold text-amber-600 flex items-center gap-2">
                 <PauseCircle className="w-4 h-4" />
                 <span>Tickets en Espera</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setShowPendingModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+                className="text-gray-400 hover:text-gray-900 p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer"
                 aria-label="Cerrar modal"
               >
                 <X className="w-4 h-4" />
@@ -679,20 +602,20 @@ export default function PosScreen() {
             </div>
 
             {cart.length > 0 && (
-              <div className="bg-slate-950/80 p-3.5 rounded-xl border border-gray-800 space-y-2.5">
-                <p className="text-xs text-slate-400">Pausar el carrito actual:</p>
+              <div className="bg-gray-50 p-3.5 rounded-2xl border border-gray-200 space-y-2.5">
+                <p className="text-xs text-gray-500">Pausar el carrito actual:</p>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     placeholder="Identificador (ej: Cliente Mostrador)"
                     value={ticketName}
                     onChange={e => setTicketName(e.target.value)}
-                    className="flex-1 bg-slate-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-gray-100 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition"
+                    className="flex-1 bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-gray-900 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition"
                   />
                   <button
                     type="button"
                     onClick={handleSavePendingTicket}
-                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs rounded-xl transition shrink-0"
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-bold text-xs rounded-xl transition shrink-0 cursor-pointer"
                   >
                     Guardar
                   </button>
@@ -700,23 +623,23 @@ export default function PosScreen() {
               </div>
             )}
 
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-800">
-              <p className="text-xs text-slate-400 font-medium">Tickets pausados:</p>
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-200">
+              <p className="text-xs text-gray-500 font-medium">Tickets pausados:</p>
               {pendingTickets.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-500 border border-dashed border-gray-800 rounded-xl">
+                <div className="p-6 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-2xl">
                   No hay tickets guardados en espera.
                 </div>
               ) : (
                 pendingTickets.map(ticket => (
                   <div
                     key={ticket.id}
-                    className="bg-slate-950/70 border border-gray-800 p-3 rounded-xl flex items-center justify-between gap-3"
+                    className="bg-gray-50 border border-gray-200 p-3 rounded-2xl flex items-center justify-between gap-3"
                   >
                     <div className="min-w-0">
-                      <h4 className="text-xs font-semibold text-gray-200 truncate">{ticket.name}</h4>
-                      <span className="text-[11px] text-slate-400 font-mono">
+                      <h4 className="text-xs font-semibold text-gray-900 truncate">{ticket.name}</h4>
+                      <span className="text-[11px] text-gray-500 font-mono">
                         {ticket.items.length} ítems •{' '}
-                        <strong className="text-emerald-400 font-bold">
+                        <strong className="text-green-600 font-bold">
                           ${ticket.total.toLocaleString('es-AR')}
                         </strong>
                       </span>
@@ -725,7 +648,7 @@ export default function PosScreen() {
                     <button
                       type="button"
                       onClick={() => { handleRestoreTicket(ticket); setShowPendingModal(false); }}
-                      className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs rounded-xl transition flex items-center gap-1.5 shrink-0"
+                      className="px-3 py-1.5 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer"
                     >
                       <PlayCircle className="w-3.5 h-3.5" />
                       <span>Recuperar</span>
@@ -738,7 +661,7 @@ export default function PosScreen() {
             <button
               type="button"
               onClick={() => setShowPendingModal(false)}
-              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition"
+              className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-xl transition cursor-pointer"
             >
               Cerrar
             </button>

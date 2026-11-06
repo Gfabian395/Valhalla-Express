@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { db } from '../../services/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
-import { ShoppingBag, MessageCircle, Plus, Minus, Store, Scale, X } from 'lucide-react';
+import { ShoppingBag, MessageCircle, Plus, Minus, Store, Scale, X, Sparkles, Image as ImageIcon } from 'lucide-react';
 
 export default function PublicCatalog() {
   const { storeId } = useParams();
   
-  const [storeInfo, setStoreInfo] = useState({ name: 'Mi Comercio', phone: '' });
+  const [storeInfo, setStoreInfo] = useState({ name: 'Supermercado', phone: '' });
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [products, setProducts] = useState([]);
@@ -23,17 +23,22 @@ export default function PublicCatalog() {
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
 
-  // 1. Cargar información del comercio
+  // 1. Cargar información del comercio desde la colección unificada 'comercios'
   useEffect(() => {
     if (!storeId) return;
     let isMounted = true;
 
     const fetchStore = async () => {
       try {
-        const storeRef = doc(db, 'stores', storeId);
+        const storeRef = doc(db, 'comercios', storeId);
         const storeSnap = await getDoc(storeRef);
+
         if (isMounted && storeSnap.exists()) {
-          setStoreInfo(storeSnap.data());
+          const data = storeSnap.data();
+          setStoreInfo({
+            name: data.name || data.nombreLocal || 'Supermercado',
+            phone: data.phone || data.whatsapp || ''
+          });
         }
       } catch (error) {
         console.error('Error al cargar datos del comercio:', error);
@@ -46,14 +51,14 @@ export default function PublicCatalog() {
     };
   }, [storeId]);
 
-  // 2. Cargar categorías públicas
+  // 2. Cargar categorías públicas desde 'comercios'
   useEffect(() => {
     if (!storeId) return;
     let isMounted = true;
 
     const fetchCategories = async () => {
       try {
-        const catSnap = await getDocs(collection(db, 'stores', storeId, 'categories'));
+        const catSnap = await getDocs(collection(db, 'comercios', storeId, 'categories'));
         const list = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         if (isMounted) {
           setCategories(list);
@@ -72,7 +77,7 @@ export default function PublicCatalog() {
     };
   }, [storeId]);
 
-  // 3. Cargar productos de la categoría seleccionada
+  // 3. Cargar productos de la categoría seleccionada desde 'comercios'
   useEffect(() => {
     if (!storeId || !selectedCategoryId) {
       setProducts([]);
@@ -82,7 +87,7 @@ export default function PublicCatalog() {
 
     const fetchProducts = async () => {
       try {
-        const prodSnap = await getDocs(collection(db, 'stores', storeId, 'categories', selectedCategoryId, 'products'));
+        const prodSnap = await getDocs(collection(db, 'comercios', storeId, 'categories', selectedCategoryId, 'products'));
         if (isMounted) {
           setProducts(prodSnap.docs.map(d => ({ id: d.id, ...d.data() })));
         }
@@ -158,7 +163,7 @@ export default function PublicCatalog() {
     }
 
     const rawPhone = storeInfo.phone ? String(storeInfo.phone).replace(/\D/g, '') : '';
-    const phone = rawPhone || '5491100000000';
+    const phone = rawPhone || '5491159781434'; // Número de respaldo predeterminado
 
     let message = `*¡Hola! Quiero hacer un pedido:*\n`;
     message += `👤 *Cliente:* ${customerName.trim()}\n`;
@@ -178,37 +183,40 @@ export default function PublicCatalog() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-gray-100 p-3.5 sm:p-6 lg:p-8">
-      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
+    <div className="min-h-screen bg-gray-100 text-gray-800 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
         
-        {/* Encabezado del Comercio */}
-        <div className="bg-gray-900/90 border border-gray-800 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 shadow-xl backdrop-blur-sm">
-          <div className="flex items-center gap-3 text-center sm:text-left">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 bg-slate-950 border border-gray-800 rounded-2xl flex items-center justify-center text-emerald-400 shrink-0">
-              <Store className="w-6 h-6" />
+        {/* Banner Estilo Revista de Supermercado */}
+        <div className="bg-linear-to-r from-green-700 to-green-600 text-white p-6 sm:p-8 rounded-3xl shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-center sm:text-left">
+            <div className="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center text-white shrink-0 backdrop-blur-sm">
+              <Store className="w-7 h-7" />
             </div>
             <div>
-              <h1 className="text-base sm:text-xl font-bold tracking-tight text-gray-100">
+              <div className="inline-flex items-center gap-1.5 bg-white/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-1">
+                <Sparkles className="w-3 h-3" /> Catálogo en Línea
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight">
                 {storeInfo.name}
               </h1>
-              <p className="text-xs text-slate-400">
-                Catálogo digital oficial • Pedidos directos por WhatsApp
+              <p className="text-xs text-green-100 font-medium">
+                Aprovechá las mejores ofertas. Hacé tu pedido directo por WhatsApp.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Categorías (Pestañas horizontales fluidas) */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-gray-800">
+        {/* Categorías (Pestañas Revista) */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-gray-200">
           {categories.map(cat => (
             <button
               key={cat.id}
               type="button"
               onClick={() => setSelectedCategoryId(cat.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shadow-2xs ${
                 selectedCategoryId === cat.id 
-                  ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20' 
-                  : 'bg-slate-900/80 border border-gray-800 text-slate-300 hover:text-white hover:border-gray-700'
+                  ? 'bg-green-600 text-white shadow-sm scale-105' 
+                  : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
               }`}
             >
               {cat.name}
@@ -216,46 +224,64 @@ export default function PublicCatalog() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* Listado de Productos */}
-          <div className="lg:col-span-7 space-y-3">
-            <h2 className="text-xs sm:text-sm font-bold text-gray-200">
-              Productos Disponibles
+          {/* Grilla de Productos (Estilo Revista / Folleto Supermercado con Imágenes) */}
+          <div className="lg:col-span-8 space-y-3">
+            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide px-1">
+              Góndola de Ofertas
             </h2>
             
             {products.length === 0 ? (
-              <div className="p-8 bg-gray-900/80 border border-dashed border-gray-800 rounded-2xl sm:rounded-3xl text-center text-xs text-slate-500">
+              <div className="p-12 bg-white border border-dashed border-gray-200 rounded-3xl text-center text-xs text-gray-400">
                 No hay productos disponibles en esta categoría.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {products.map(prod => (
                   <div 
                     key={prod.id}
                     onClick={() => handleProductClick(prod)}
-                    className="bg-gray-900/90 border border-gray-800 hover:border-emerald-500/40 p-3 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer transition-all flex flex-col justify-between shadow-lg shadow-black/20 space-y-3 group active:scale-[0.99]"
+                    className="bg-white border border-gray-200 hover:border-green-500 rounded-3xl p-4 cursor-pointer transition-all flex flex-col justify-between shadow-sm hover:shadow-md group relative overflow-hidden"
                   >
-                    <div>
-                      <h3 className="text-xs sm:text-sm font-semibold text-gray-100 group-hover:text-emerald-300 transition-colors">
-                        {prod.name}
-                      </h3>
+                    {/* Renderizado de la Imagen (Base64 desde galería) */}
+                    <div className="w-full h-36 bg-gray-50 rounded-2xl overflow-hidden mb-3 border border-gray-100 flex items-center justify-center relative">
+                      {prod.imageUrl ? (
+                        <img 
+                          src={prod.imageUrl} 
+                          alt={prod.name} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                        />
+                      ) : (
+                        <div className="text-gray-300 flex flex-col items-center gap-1">
+                          <ImageIcon className="w-8 h-8" />
+                          <span className="text-[10px] font-mono">Sin imagen</span>
+                        </div>
+                      )}
                       {prod.isWeightBased && (
-                        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold inline-flex items-center gap-1 mt-1.5 font-mono">
-                          <Scale className="w-3 h-3" /> Venta por Kilo
+                        <span className="absolute top-2 right-2 text-[10px] bg-green-600 text-white px-2 py-0.5 rounded-full font-bold shadow-xs font-mono">
+                          Peso
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-800/80">
-                      <span className="text-sm sm:text-base font-black text-emerald-400 font-mono">
-                        ${Number(prod.price || 0).toLocaleString('es-AR')}
-                        {prod.isWeightBased && <span className="text-[10px] text-slate-400 font-normal ml-0.5">/kg</span>}
-                      </span>
+                    <div className="space-y-1 mb-3">
+                      <h3 className="text-xs sm:text-sm font-bold text-gray-900 line-clamp-2 group-hover:text-green-700 transition-colors">
+                        {prod.name}
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                      <div>
+                        <span className="text-sm sm:text-base font-black text-green-600 font-mono tracking-tight block">
+                          ${Number(prod.price || 0).toLocaleString('es-AR')}
+                        </span>
+                        {prod.isWeightBased && <span className="text-[10px] text-gray-400 font-medium">precio por kg</span>}
+                      </div>
                       <button 
                         type="button" 
                         aria-label={`Agregar ${prod.name} al carrito`}
-                        className="p-1.5 sm:p-2 bg-slate-950 border border-gray-800 text-emerald-400 rounded-lg group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors"
+                        className="p-2.5 bg-green-50 text-green-700 rounded-xl group-hover:bg-green-600 group-hover:text-white transition-colors cursor-pointer shadow-2xs"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
@@ -266,51 +292,51 @@ export default function PublicCatalog() {
             )}
           </div>
 
-          {/* Carrito de Pedido Público */}
-          <div className="lg:col-span-5 bg-gray-900/90 border border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between space-y-4 shadow-xl backdrop-blur-sm lg:sticky lg:top-20">
+          {/* Carrito de Pedido Estilo Supermercado */}
+          <div className="lg:col-span-4 bg-white border border-gray-200 rounded-3xl p-5 flex flex-col justify-between space-y-4 shadow-sm lg:sticky lg:top-6">
             <div className="space-y-3.5">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-800">
-                <h3 className="text-xs sm:text-sm font-bold text-gray-100 flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-emerald-400" />
-                  <span>Tu Pedido</span>
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-green-600" />
+                  <span>Tu Carrito</span>
                 </h3>
-                <span className="text-[11px] bg-slate-950/80 text-slate-300 border border-gray-800 px-2.5 py-0.5 rounded-full font-mono">
-                  {cart.length} items
+                <span className="text-[11px] bg-green-50 text-green-700 border border-green-200 px-2.5 py-0.5 rounded-full font-mono font-bold">
+                  {cart.length} ítems
                 </span>
               </div>
 
               {cart.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-500 border border-dashed border-gray-800 rounded-xl">
-                  Selecciona productos para armar tu lista de compras.
+                <div className="p-8 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-2xl">
+                  Tocá cualquier producto de la góndola para agregarlo a tu pedido.
                 </div>
               ) : (
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-800">
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-200">
                   {cart.map(item => (
                     <div 
                       key={item.id} 
-                      className="bg-slate-950/70 p-2.5 sm:p-3 rounded-xl border border-gray-800 flex items-center justify-between gap-2"
+                      className="bg-gray-50 p-3 rounded-2xl border border-gray-200 flex items-center justify-between gap-2"
                     >
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-xs font-semibold text-gray-200 truncate">{item.name}</h4>
-                        <span className="text-[11px] text-emerald-400 font-mono block">
+                        <h4 className="text-xs font-semibold text-gray-900 truncate">{item.name}</h4>
+                        <span className="text-[11px] text-green-600 font-mono font-bold block">
                           {item.qty} {item.isWeightBased ? 'kg' : 'un.'} • ${(Number(item.price || 0) * Number(item.qty || 0)).toLocaleString('es-AR')}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0 bg-slate-900 border border-gray-800 px-1 py-0.5 rounded-lg">
+                      <div className="flex items-center gap-1 shrink-0 bg-white border border-gray-200 px-1.5 py-1 rounded-xl shadow-2xs">
                         <button 
                           type="button" 
                           onClick={() => updateCartQty(item.id, -1)} 
-                          className="p-1 text-slate-400 hover:text-white rounded transition"
+                          className="p-1 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition cursor-pointer"
                           aria-label="Restar unidad"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="text-xs font-mono font-bold px-1 text-gray-100">{item.qty}</span>
+                        <span className="text-xs font-mono font-bold px-1 text-gray-900">{item.qty}</span>
                         <button 
                           type="button" 
                           onClick={() => updateCartQty(item.id, 1)} 
-                          className="p-1 text-slate-400 hover:text-white rounded transition"
+                          className="p-1 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition cursor-pointer"
                           aria-label="Sumar unidad"
                         >
                           <Plus className="w-3 h-3" />
@@ -323,27 +349,27 @@ export default function PublicCatalog() {
             </div>
 
             {/* Formulario y Confirmación por WhatsApp */}
-            <div className="space-y-3 pt-3 border-t border-gray-800/90">
+            <div className="space-y-3 pt-3 border-t border-gray-100">
               <div className="space-y-2">
                 <input
                   type="text"
                   placeholder="Tu Nombre y Apellido *"
                   value={customerName}
                   onChange={e => setCustomerName(e.target.value)}
-                  className="w-full bg-slate-950 border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-gray-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 transition"
                 />
                 <input
                   type="text"
                   placeholder="Dirección o punto de entrega (opcional)"
                   value={customerAddress}
                   onChange={e => setCustomerAddress(e.target.value)}
-                  className="w-full bg-slate-950 border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-gray-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 transition"
                 />
               </div>
 
-              <div className="flex items-baseline justify-between px-1">
-                <span className="text-xs font-bold text-slate-400 uppercase">Total Estimado:</span>
-                <span className="text-lg font-black text-emerald-400 font-mono tracking-tight">
+              <div className="flex items-baseline justify-between px-1 bg-gray-50 p-3 rounded-2xl border border-gray-200">
+                <span className="text-xs font-bold text-gray-500 uppercase">Total Estimado:</span>
+                <span className="text-lg font-black text-green-600 font-mono tracking-tight">
                   ${cartTotal.toLocaleString('es-AR')}
                 </span>
               </div>
@@ -352,10 +378,10 @@ export default function PublicCatalog() {
                 type="button"
                 onClick={sendWhatsAppOrder}
                 disabled={cart.length === 0}
-                className="w-full py-3 px-4 bg-emerald-500 hover:bg-emerald-400 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-slate-950 font-bold text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20"
+                className="w-full py-3.5 px-4 bg-green-600 hover:bg-green-700 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4 shrink-0" />
-                <span>Pedir por WhatsApp</span>
+                <span>Enviar Pedido por WhatsApp</span>
               </button>
             </div>
           </div>
@@ -366,17 +392,16 @@ export default function PublicCatalog() {
       {/* Modal para calcular peso en catálogo público */}
       {showWeightModal && weightProduct && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-gray-900 border border-gray-800 text-gray-100 rounded-t-2xl sm:rounded-3xl p-5 sm:p-6 max-w-sm w-full relative shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-800">
-              <h3 className="text-sm font-bold text-gray-100 flex items-center gap-2">
-                <Scale className="w-4 h-4 text-emerald-400" />
+          <div className="bg-white border border-gray-200 text-gray-900 rounded-t-3xl sm:rounded-3xl p-6 max-w-sm w-full relative shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <Scale className="w-4 h-4 text-green-600" />
                 <span>Seleccionar Peso</span>
               </h3>
               <button 
                 type="button" 
                 onClick={() => setShowWeightModal(false)} 
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
-                aria-label="Cerrar modal"
+                className="text-gray-400 hover:text-gray-900 p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -384,14 +409,14 @@ export default function PublicCatalog() {
 
             <div className="space-y-3">
               <div>
-                <h4 className="text-sm font-semibold text-gray-100">{weightProduct.name}</h4>
-                <p className="text-xs text-emerald-400 font-mono mt-0.5">
+                <h4 className="text-sm font-semibold text-gray-900">{weightProduct.name}</h4>
+                <p className="text-xs text-green-600 font-mono mt-0.5">
                   Precio por Kilo: ${Number(weightProduct.price || 0).toLocaleString('es-AR')} /kg
                 </p>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-slate-400 block">
+                <label className="text-[10px] uppercase font-bold text-gray-500 block">
                   ¿Cuánto deseas llevar?
                 </label>
                 <div className="flex gap-2">
@@ -403,12 +428,12 @@ export default function PublicCatalog() {
                     value={weightInput}
                     onChange={e => setWeightInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleConfirmWeight(); }}
-                    className="flex-1 bg-slate-950 border border-gray-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-gray-100 font-mono focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-gray-900 font-mono focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 transition"
                   />
                   <select
                     value={weightUnit}
                     onChange={e => setWeightUnit(e.target.value)}
-                    className="bg-slate-950 border border-gray-800 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-300 focus:outline-none cursor-pointer"
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none cursor-pointer"
                   >
                     <option value="grams">Gramos (g)</option>
                     <option value="kg">Kilos (kg)</option>
@@ -421,14 +446,14 @@ export default function PublicCatalog() {
               <button
                 type="button"
                 onClick={() => setShowWeightModal(false)}
-                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition"
+                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleConfirmWeight}
-                className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs rounded-xl transition shadow-md shadow-emerald-500/20"
+                className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold text-xs rounded-xl transition shadow-sm cursor-pointer"
               >
                 Agregar
               </button>
