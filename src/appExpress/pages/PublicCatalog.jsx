@@ -151,7 +151,7 @@ export default function PublicCatalog() {
 
   const cartTotal = cart.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.qty || 0)), 0);
 
-  // Enviar pedido por WhatsApp sanitizado y codificado
+  // Enviar pedido por WhatsApp sanitizado y codificado con el formato estructurado requerido
   const sendWhatsAppOrder = () => {
     if (cart.length === 0) {
       alert('Tu carrito está vacío.');
@@ -165,7 +165,7 @@ export default function PublicCatalog() {
     const rawPhone = storeInfo.phone ? String(storeInfo.phone).replace(/\D/g, '') : '';
     const phone = rawPhone || '5491159781434'; // Número de respaldo predeterminado
 
-    let message = `*¡Hola! Quiero hacer un pedido:*\n`;
+    let message = `🚨 *NUEVO REGISTRO - VALHALLA EXPRESS*\n\n`;
     message += `👤 *Cliente:* ${customerName.trim()}\n`;
     if (customerAddress.trim()) message += `📍 *Dirección:* ${customerAddress.trim()}\n`;
     message += `\n*Detalle del pedido:*\n`;
@@ -226,7 +226,7 @@ export default function PublicCatalog() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* Grilla de Productos (Estilo Revista / Folleto Supermercado con Imágenes) */}
+          {/* Grilla de Productos */}
           <div className="lg:col-span-8 space-y-3">
             <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide px-1">
               Góndola de Ofertas
@@ -244,7 +244,6 @@ export default function PublicCatalog() {
                     onClick={() => handleProductClick(prod)}
                     className="bg-white border border-gray-200 hover:border-green-500 rounded-3xl p-4 cursor-pointer transition-all flex flex-col justify-between shadow-sm hover:shadow-md group relative overflow-hidden"
                   >
-                    {/* Renderizado de la Imagen (Base64 desde galería) */}
                     <div className="w-full h-36 bg-gray-50 rounded-2xl overflow-hidden mb-3 border border-gray-100 flex items-center justify-center relative">
                       {prod.imageUrl ? (
                         <img 
@@ -292,7 +291,7 @@ export default function PublicCatalog() {
             )}
           </div>
 
-          {/* Carrito de Pedido Estilo Supermercado */}
+          {/* Carrito de Pedido */}
           <div className="lg:col-span-4 bg-white border border-gray-200 rounded-3xl p-5 flex flex-col justify-between space-y-4 shadow-sm lg:sticky lg:top-6">
             <div className="space-y-3.5">
               <div className="flex items-center justify-between pb-3 border-b border-gray-100">

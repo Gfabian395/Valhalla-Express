@@ -1,5 +1,4 @@
-import React from 'react';
-import { AlertTriangle, RefreshCw, MessageSquare, ShieldCheck, Clock } from 'lucide-react';
+import { RefreshCw, MessageSquare, Clock } from 'lucide-react';
 
 export default function SuspendedOverlay({ storeId, onCheckStatus }) {
   const handleWhatsAppSupport = () => {

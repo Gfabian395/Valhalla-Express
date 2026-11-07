@@ -3,11 +3,9 @@ import LoginOnboarding from './appExpress/pages/LoginOnboarding';
 import AppExpressLayout from './appExpress/AppExpressLayout';
 import PosScreen from './appExpress/pages/PosScreen';
 import StockCategories from './appExpress/pages/StockCategories';
-import CustomersCredit from './appExpress/pages/CustomersCredit';
 import SettingsStore from './appExpress/pages/SettingsStore';
-import BranchesManage from './appExpress/pages/BranchesManage';
 import PublicCatalog from './appExpress/pages/PublicCatalog';
-import DailySalesScreen from './appExpress/components/DailySalesScreen';
+import DailySalesScreen from './appExpress/components/DailySalesScreen'; // <-- Corregido aquí
 
 function App() {
   return (
@@ -21,9 +19,7 @@ function App() {
           <Route path="pos" element={<PosScreen />} />
           <Route path="stock" element={<StockCategories />} />
           <Route path="ventas-dia" element={<DailySalesScreen />} />
-          <Route path="fiados" element={<CustomersCredit />} />
           <Route path="config" element={<SettingsStore />} />
-          <Route path="branches" element={<BranchesManage />} />
         </Route>
       </Routes>
     </BrowserRouter>

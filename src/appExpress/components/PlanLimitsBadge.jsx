@@ -26,37 +26,27 @@ export default function PlanLimitsBadge({ type = 'categories', categoryId = null
       try {
         setLoading(true);
 
-        // 1. Obtener datos del comercio en 'comercios'
         const storeRef = doc(db, 'comercios', storeId);
         const storeSnap = await getDoc(storeRef);
         const storeData = storeSnap.exists() ? storeSnap.data() : {};
         
-        console.log('[BADGE] 🏪 Datos del comercio encontrados:', storeData);
-
-        // Extraer la clave del plan con múltiples alternativas de nombres de campos
         let planKey = storeData.plan || storeData.planSeleccionado || storeData.planId || 'basico';
         if (typeof planKey === 'string') {
           planKey = planKey.toLowerCase().replace('plan_', '').trim();
         }
-        console.log('[BADGE] 🔑 Clave de plan normalizada:', planKey);
 
-        // 2. Buscar el plan en 'express_planes'
         let planRef = doc(db, 'express_planes', planKey);
         let planSnap = await getDoc(planRef);
 
-        // Si no existe con esa clave, intentamos buscar el primer plan disponible en la colección como emergencia
         if (!planSnap.exists()) {
-          console.warn(`[BADGE] ⚠️ El plan "${planKey}" no existe en 'express_planes'. Buscando fallback...`);
           const allPlansSnap = await getDocs(collection(db, 'express_planes'));
           if (!allPlansSnap.empty) {
-            // Intentar buscar uno que coincida parcialmente o tomar el primero
             const found = allPlansSnap.docs.find(d => d.id.toLowerCase().includes(planKey) || planKey.includes(d.id.toLowerCase()));
             planSnap = found || allPlansSnap.docs[0];
           }
         }
 
         const planData = planSnap && planSnap.exists ? planSnap.data() : { maxCategorias: 15, maxProductosPorCat: 30, nombre: 'Plan Básico' };
-        console.log('[BADGE] 📦 Datos del plan obtenidos:', planData);
         
         let currentCount = 0;
         let maxLimit = 0;
@@ -78,8 +68,6 @@ export default function PlanLimitsBadge({ type = 'categories', categoryId = null
           const prodSnap = await getDocs(collection(db, 'comercios', storeId, 'categories', categoryId, 'products'));
           currentCount = prodSnap.size;
         }
-
-        console.log(`[BADGE] ✅ Conteo actual: ${currentCount} / Límite máximo: ${maxLimit}`);
 
         if (isMounted) {
           setUsage({

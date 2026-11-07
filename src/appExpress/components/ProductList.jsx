@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/firebase';
-import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
-import { canCreateProduct } from '../services/planValidation';
+import { collection, getDocs, addDoc, deleteDoc, doc, getDoc } from 'firebase/firestore';
 import PlanLimitsBadge from './PlanLimitsBadge';
 import { Package, Plus, Trash2, AlertCircle } from 'lucide-react';
 
@@ -15,7 +14,6 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Cargar productos de la categoría seleccionada
   useEffect(() => {
     if (!storeId || !categoryId) {
       setProducts([]);
@@ -26,7 +24,7 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
 
     const fetchProducts = async () => {
       try {
-        const prodRef = collection(db, 'stores', storeId, 'categories', categoryId, 'products');
+        const prodRef = collection(db, 'comercios', storeId, 'categories', categoryId, 'products');
         const snap = await getDocs(prodRef);
         if (isMounted) {
           setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -43,7 +41,6 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
     };
   }, [storeId, categoryId, refreshKey]);
 
-  // Crear producto validando límite del plan en Firebase
   const handleAddProduct = async (e) => {
     e.preventDefault();
     const cleanName = prodName.trim();
@@ -53,9 +50,19 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
     setLoading(true);
 
     try {
-      const validation = await canCreateProduct(storeId, categoryId);
-      if (!validation.allowed) {
-        setErrorMsg(validation.message);
+      // Validación estricta del límite de productos en Firestore
+      const storeRef = doc(db, 'comercios', storeId);
+      const storeSnap = await getDoc(storeRef);
+      const storeData = storeSnap.exists() ? storeSnap.data() : {};
+      let planKey = storeData.plan || storeData.planSeleccionado || 'basico';
+      if (planKey === 'plan_basico') planKey = 'basico';
+
+      const planSnap = await getDoc(doc(db, 'express_planes', planKey));
+      const planData = planSnap.exists() ? planSnap.data() : { maxProductosPorCat: 30 };
+      const maxProducts = Number(planData.maxProductosPorCat ?? 30);
+
+      if (maxProducts !== -1 && products.length >= maxProducts) {
+        setErrorMsg(`Has alcanzado el límite de ${maxProducts} productos permitidos por categoría para tu plan.`);
         setLoading(false);
         return;
       }
@@ -69,14 +76,13 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
       };
 
       const docRef = await addDoc(
-        collection(db, 'stores', storeId, 'categories', categoryId, 'products'),
+        collection(db, 'comercios', storeId, 'categories', categoryId, 'products'),
         newProductData
       );
 
       setProducts(prev => [...prev, { id: docRef.id, ...newProductData }]);
       setRefreshKey(prev => prev + 1);
 
-      // Limpiar formulario
       setProdName('');
       setProdPrice('');
       setProdStock('');
@@ -89,11 +95,10 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
     }
   };
 
-  // Eliminar producto
   const handleDeleteProduct = async (prodId) => {
     if (!window.confirm('¿Eliminar este producto del stock?')) return;
     try {
-      await deleteDoc(doc(db, 'stores', storeId, 'categories', categoryId, 'products', prodId));
+      await deleteDoc(doc(db, 'comercios', storeId, 'categories', categoryId, 'products', prodId));
       setProducts(prev => prev.filter(p => p.id !== prodId));
       setRefreshKey(prev => prev + 1);
     } catch (error) {
@@ -128,7 +133,6 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
         </div>
       </div>
 
-      {/* Alerta de Error */}
       {errorMsg && (
         <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-600 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
@@ -185,7 +189,7 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
         </div>
       )}
 
-      {/* Contenedor de Productos: Cards en Mobile, Tabla en Desktop */}
+      {/* Contenedor de Productos */}
       <div className="overflow-y-auto flex-1 pr-1 min-h-40 scrollbar-thin scrollbar-thumb-gray-200">
         {!categoryId ? (
           <div className="h-full min-h-40 flex items-center justify-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-2xl p-4">
@@ -197,7 +201,7 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
           </div>
         ) : (
           <>
-            {/* Vista Smartphone (Cards apiladas) */}
+            {/* Vista Smartphone */}
             <div className="space-y-2 md:hidden">
               {products.map(prod => (
                 <div
@@ -235,7 +239,7 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
               ))}
             </div>
 
-            {/* Vista PC / Tablet (Tabla Clásica) */}
+            {/* Vista PC / Tablet */}
             <div className="hidden md:block">
               <table className="w-full text-left border-collapse">
                 <thead>

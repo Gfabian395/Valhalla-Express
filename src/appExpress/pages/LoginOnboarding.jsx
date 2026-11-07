@@ -294,9 +294,9 @@ export default function LoginOnboarding() {
                           </div>
 
                           <ul className="text-[10px] text-gray-500 space-y-0.5 pt-1.5 border-t border-gray-200/60 font-mono">
-                            <li>• {maxCat === -1 ? 'Categorías ilimitadas' : `${maxCat} categorías`}</li>
-                            <li>• {maxProd === -1 ? 'Productos ilimitados' : `${maxProd} prods/cat`}</li>
-                            <li>• {maxBr} {maxBr === 1 ? 'sucursal' : 'sucursales'}</li>
+                            <li>{maxCat === -1 ? 'Categorías ilimitadas' : `${maxCat} categorías`}</li>
+                            <li>{maxProd === -1 ? 'Productos ilimitados' : `${maxProd} prods/cat`}</li>
+                            <li>{maxBr} {maxBr === 1 ? 'sucursal' : 'sucursales'}</li>
                           </ul>
                         </div>
                       </div>

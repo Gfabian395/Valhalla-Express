@@ -14,7 +14,6 @@ export default function DailySalesScreen() {
     return today.toISOString().split('T')[0];
   };
 
-  // Cargar el teléfono y el nombre del comercio desde la colección unificada 'comercios'
   useEffect(() => {
     if (!storeId) return;
     const fetchStoreData = async () => {
@@ -38,7 +37,6 @@ export default function DailySalesScreen() {
     fetchStoreData();
   }, [storeId]);
 
-  // Cargar las ventas del día desde el localStorage de forma local
   useEffect(() => {
     const savedDate = localStorage.getItem('valhalla_sales_date');
     const savedSales = localStorage.getItem('valhalla_daily_sales');
@@ -71,7 +69,6 @@ export default function DailySalesScreen() {
 
   const totalDaySales = sales.reduce((sum, item) => sum + Number(item.total || 0), 0);
 
-  // Enviar informe detallado tipo ticket por WhatsApp
   const sendWhatsAppReport = () => {
     if (sales.length === 0) {
       alert('No hay ventas registradas en el día de hoy.');
@@ -109,7 +106,6 @@ export default function DailySalesScreen() {
     window.open(url, '_blank');
   };
 
-  // Imprimir informe detallado localmente
   const handlePrintReport = () => {
     if (sales.length === 0) {
       alert('No hay ventas para imprimir en el día de hoy.');

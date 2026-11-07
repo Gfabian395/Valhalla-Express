@@ -14,7 +14,6 @@ export default function CategoryList({ storeId, onSelectCategory, selectedCatego
   const [maxCategoriesAllowed, setMaxCategoriesAllowed] = useState(15);
   const [planName, setPlanName] = useState('Plan');
 
-  // Referencia unificada a la subcolección dentro de la colección 'comercios'
   const getCategoriesCollectionRef = useCallback(() => {
     return collection(db, 'comercios', storeId, 'categories');
   }, [storeId]);

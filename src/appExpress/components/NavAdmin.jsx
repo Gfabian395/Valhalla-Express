@@ -15,7 +15,6 @@ export default function NavAdmin() {
     let isMounted = true;
     const fetchStoreName = async () => {
       try {
-        // Consultar directamente en la colección 'comercios'
         const storeRef = doc(db, 'comercios', storeId);
         const storeSnap = await getDoc(storeRef);
         if (isMounted) {
@@ -95,7 +94,7 @@ export default function NavAdmin() {
               {storeName}
             </span>
             <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">
-              Multi-Comercio
+              Valhalla Express
             </span>
           </div>
         </div>

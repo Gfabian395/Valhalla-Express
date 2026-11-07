@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../services/firebase';
 import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc, getDoc } from 'firebase/firestore';
-import { PauseCircle, PlayCircle, Users, CheckCircle2, Building2, Scale, X, DollarSign, Share2 } from 'lucide-react';
-import ProductScanner from '../components/ProductScanner';
+import { PauseCircle, PlayCircle, Users, CheckCircle2, Building2, Scale, X, DollarSign, Share2, Search, Barcode } from 'lucide-react';
 import CartSection from '../components/CartSection';
 
 export default function PosScreen() {
@@ -411,14 +410,75 @@ export default function PosScreen() {
         </div>
       )}
 
-      {/* Grilla Principal: Escáner y Carrito */}
+      {/* Grilla Principal: Buscador/Escáner de caja y Carrito */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <ProductScanner
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          handleKeyDown={handleKeyDown}
-          allProductsCount={allProducts.length}
-        />
+        
+        {/* Panel de Búsqueda / Escáner de Productos */}
+        <div className="lg:col-span-7 bg-white border border-gray-200 rounded-3xl p-6 space-y-4 shadow-sm">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+            <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+              <Barcode className="w-5 h-5 text-green-600" />
+              <span>Escáner / Búsqueda de Productos</span>
+            </h2>
+            <span className="text-[11px] bg-gray-50 border border-gray-200 px-2.5 py-0.5 rounded-full font-mono text-gray-600">
+              {allProducts.length} productos en stock
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Escanea el código de barras o escribe el nombre y presiona Enter..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm text-gray-900 placeholder-gray-400 font-mono focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 transition"
+              />
+            </div>
+            <p className="text-[11px] text-gray-400 italic px-1">
+              💡 Tip: Puedes buscar tipeando parte del nombre o escaneando el SKU directamente. Presiona <kbd className="bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded font-mono text-gray-600">Enter</kbd> para agregar al carrito.
+            </p>
+          </div>
+
+          {/* Listado rápido de referencia visual de productos */}
+          <div className="space-y-2 pt-2">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+              Productos Disponibles para Venta Directa
+            </h3>
+            <div className="max-h-80 overflow-y-auto pr-1 space-y-1.5 scrollbar-thin scrollbar-thumb-gray-200">
+              {allProducts.length === 0 ? (
+                <div className="p-8 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-2xl">
+                  No hay productos cargados en el inventario. Ve a <strong className="text-gray-600">Existencias</strong> para agregarlos.
+                </div>
+              ) : (
+                allProducts.map(prod => (
+                  <div
+                    key={prod.id}
+                    onClick={() => handleProductSelection(prod)}
+                    className="bg-gray-50 hover:bg-green-50/50 border border-gray-200/80 hover:border-green-300 p-3 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all group"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs sm:text-sm font-semibold text-gray-900 truncate group-hover:text-green-800">
+                        {prod.name}
+                      </h4>
+                      <div className="text-[11px] text-gray-400 font-mono">
+                        SKU: {prod.sku} • Stock: <span className={prod.stock > 5 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{prod.stock} un.</span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs sm:text-sm font-black text-green-600 font-mono block">
+                        ${Number(prod.price || 0).toLocaleString('es-AR')}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
 
         <CartSection
           cart={cart}

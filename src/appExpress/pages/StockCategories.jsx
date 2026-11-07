@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { db, auth } from '../../services/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import CategoryList from '../components/CategoryList';
-import ShelfLabelsModal from '../components/ShelfLabelsModal';
 import PlanLimitsBadge from '../components/PlanLimitsBadge';
 import { Package, Plus, Printer, Trash2, AlertCircle, LogIn, X, Save, Scale, Edit3, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
