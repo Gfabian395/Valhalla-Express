@@ -5,7 +5,7 @@ import PosScreen from './appExpress/pages/PosScreen';
 import StockCategories from './appExpress/pages/StockCategories';
 import SettingsStore from './appExpress/pages/SettingsStore';
 import PublicCatalog from './appExpress/pages/PublicCatalog';
-import DailySalesScreen from './appExpress/components/DailySalesScreen'; // <-- Corregido aquí
+import DailySalesScreen from './appExpress/components/DailySalesScreen';
 
 function App() {
   return (
@@ -20,6 +20,8 @@ function App() {
           <Route path="stock" element={<StockCategories />} />
           <Route path="ventas-dia" element={<DailySalesScreen />} />
           <Route path="config" element={<SettingsStore />} />
+          {/* Ruta agregada para solucionar el error de fiados */}
+          <Route path="fiados" element={<PosScreen />} /> 
         </Route>
       </Routes>
     </BrowserRouter>
