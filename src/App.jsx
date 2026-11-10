@@ -6,6 +6,7 @@ import StockCategories from './appExpress/pages/StockCategories';
 import SettingsStore from './appExpress/pages/SettingsStore';
 import PublicCatalog from './appExpress/pages/PublicCatalog';
 import DailySalesScreen from './appExpress/components/DailySalesScreen';
+import FiadosLibretaScreen from './appExpress/pages/FiadosLibretaScreen';
 
 function App() {
   return (
@@ -20,8 +21,8 @@ function App() {
           <Route path="stock" element={<StockCategories />} />
           <Route path="ventas-dia" element={<DailySalesScreen />} />
           <Route path="config" element={<SettingsStore />} />
-          {/* Ruta agregada para solucionar el error de fiados */}
-          <Route path="fiados" element={<PosScreen />} /> 
+          {/* Ruta conectada al componente libreta de fiados */}
+          <Route path="fiados" element={<FiadosLibretaScreen />} /> 
         </Route>
       </Routes>
     </BrowserRouter>

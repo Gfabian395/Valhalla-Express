@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../services/firebase';
-import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { PauseCircle, PlayCircle, Users, CheckCircle2, Building2, Scale, X, DollarSign, Share2, Search, Barcode } from 'lucide-react';
 import CartSection from '../components/CartSection';
 
@@ -59,7 +59,7 @@ export default function PosScreen() {
     fetchProducts();
   }, [storeId, successMsg]);
 
-  // Cargar tickets pendientes y clientes desde 'comercios'
+  // Cargar tickets pendientes y clientes desde la subcolección 'clients'
   useEffect(() => {
     if (!storeId) return;
     const fetchData = async () => {
@@ -67,7 +67,8 @@ export default function PosScreen() {
         const ticketsSnap = await getDocs(collection(db, 'comercios', storeId, 'pendingTickets'));
         setPendingTickets(ticketsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-        const custSnap = await getDocs(collection(db, 'comercios', storeId, 'customers'));
+        // 🟢 Corrección: Leemos de la subcolección unificada 'clients' donde se guardan los fiados de la libreta
+        const custSnap = await getDocs(collection(db, 'comercios', storeId, 'clients'));
         setCustomersList(custSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (error) {
         console.error('Error al cargar datos auxiliares:', error);
@@ -290,17 +291,19 @@ export default function PosScreen() {
     const currentTotal = cartTotal;
 
     try {
-      const customerRef = doc(db, 'comercios', storeId, 'customers', selectedCustomerId);
+      // 🟢 Corrección: Apuntamos a la subcolección 'clients' y actualizamos 'saldoDeuda'
+      const customerRef = doc(db, 'comercios', storeId, 'clients', selectedCustomerId);
       const customerSnap = await getDoc(customerRef);
 
       if (!customerSnap.exists()) {
-        alert('El cliente seleccionado ya no existe.');
+        alert('El cliente seleccionado ya no existe en la libreta.');
         return;
       }
 
-      const currentDebt = Number(customerSnap.data().debt) || 0;
-      await updateDoc(customerRef, { debt: currentDebt + currentTotal });
+      const currentDebt = Number(customerSnap.data().saldoDeuda || customerSnap.data().debt || 0);
+      await updateDoc(customerRef, { saldoDeuda: currentDebt + currentTotal });
 
+      // Descontar el stock de los productos vendidos
       for (const item of cart) {
         const productRef = doc(db, 'comercios', storeId, 'categories', item.categoryId, 'products', item.id);
 
@@ -310,6 +313,7 @@ export default function PosScreen() {
         }
       }
 
+      // Registrar también en las ventas del día del local
       const today = new Date().toISOString().split('T')[0];
       const savedDate = localStorage.getItem('valhalla_sales_date');
       let currentSales = [];
@@ -332,7 +336,7 @@ export default function PosScreen() {
       currentSales.push(newSaleRecord);
       localStorage.setItem('valhalla_daily_sales', JSON.stringify(currentSales));
 
-      setSuccessMsg('¡Fiado registrado con éxito a la cuenta del cliente!');
+      setSuccessMsg('¡Fiado registrado con éxito en la libreta del cliente y stock actualizado!');
       setCart([]);
       setSelectedCustomerId('');
       setShowCreditModal(false);
@@ -597,7 +601,7 @@ export default function PosScreen() {
 
             <div className="space-y-3">
               <p className="text-xs text-gray-500 leading-relaxed">
-                Selecciona el cliente a quien se le cargará el monto de{' '}
+                Selecciona el cliente de la libreta a quien se le cargará el monto de{' '}
                 <strong className="text-green-600 font-mono font-bold">${cartTotal.toLocaleString('es-AR')}</strong>:
               </p>
 
@@ -612,11 +616,16 @@ export default function PosScreen() {
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition cursor-pointer"
                 >
                   <option value="">-- Seleccionar Cliente --</option>
-                  {customersList.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.phone ? `(${c.phone})` : ''} - Deuda: ${Number(c.debt || 0).toLocaleString('es-AR')}
-                    </option>
-                  ))}
+                  {customersList.map(c => {
+                    const clientName = c.nombre || c.name || 'Sin nombre';
+                    const clientPhone = c.telefono || c.phone || '';
+                    const clientDebt = Number(c.saldoDeuda || c.debt || 0);
+                    return (
+                      <option key={c.id} value={c.id}>
+                        {clientName} {clientPhone ? `(${clientPhone})` : ''} — Debe: ${clientDebt.toLocaleString('es-AR')}
+                      </option>
+                    );
+                  })}
                 </select>
               )}
             </div>
