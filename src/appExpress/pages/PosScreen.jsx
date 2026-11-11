@@ -67,7 +67,6 @@ export default function PosScreen() {
         const ticketsSnap = await getDocs(collection(db, 'comercios', storeId, 'pendingTickets'));
         setPendingTickets(ticketsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-        // 🟢 Corrección: Leemos de la subcolección unificada 'clients' donde se guardan los fiados de la libreta
         const custSnap = await getDocs(collection(db, 'comercios', storeId, 'clients'));
         setCustomersList(custSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (error) {
@@ -291,7 +290,6 @@ export default function PosScreen() {
     const currentTotal = cartTotal;
 
     try {
-      // 🟢 Corrección: Apuntamos a la subcolección 'clients' y actualizamos 'saldoDeuda'
       const customerRef = doc(db, 'comercios', storeId, 'clients', selectedCustomerId);
       const customerSnap = await getDoc(customerRef);
 
@@ -303,7 +301,6 @@ export default function PosScreen() {
       const currentDebt = Number(customerSnap.data().saldoDeuda || customerSnap.data().debt || 0);
       await updateDoc(customerRef, { saldoDeuda: currentDebt + currentTotal });
 
-      // Descontar el stock de los productos vendidos
       for (const item of cart) {
         const productRef = doc(db, 'comercios', storeId, 'categories', item.categoryId, 'products', item.id);
 
@@ -313,7 +310,6 @@ export default function PosScreen() {
         }
       }
 
-      // Registrar también en las ventas del día del local
       const today = new Date().toISOString().split('T')[0];
       const savedDate = localStorage.getItem('valhalla_sales_date');
       let currentSales = [];
@@ -381,7 +377,6 @@ export default function PosScreen() {
           </div>
         </div>
 
-        {/* Acciones en línea compacta */}
         <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
@@ -414,7 +409,7 @@ export default function PosScreen() {
         </div>
       )}
 
-      {/* Grilla Principal: Buscador/Escáner de caja y Carrito */}
+      {/* Grilla Principal */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Panel de Búsqueda / Escáner de Productos */}
@@ -447,7 +442,6 @@ export default function PosScreen() {
             </p>
           </div>
 
-          {/* Listado rápido de referencia visual de productos */}
           <div className="space-y-2 pt-2">
             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">
               Productos Disponibles para Venta Directa
@@ -468,8 +462,10 @@ export default function PosScreen() {
                       <h4 className="text-xs sm:text-sm font-semibold text-gray-900 truncate group-hover:text-green-800">
                         {prod.name}
                       </h4>
-                      <div className="text-[11px] text-gray-400 font-mono">
-                        SKU: {prod.sku} • Stock: <span className={prod.stock > 5 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{prod.stock} un.</span>
+                      <div className="text-[11px] text-gray-400 font-mono flex flex-wrap gap-x-2">
+                        <span>SKU: {prod.sku}</span>
+                        <span>•</span>
+                        <span>Stock: <strong className={prod.stock > 5 ? 'text-green-600' : 'text-red-500'}>{prod.stock} un.</strong></span>
                       </div>
                     </div>
                     <div className="text-right shrink-0">

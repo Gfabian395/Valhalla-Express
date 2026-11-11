@@ -25,7 +25,7 @@ export default function AppExpressLayout() {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Función para verificar el estado en Firestore (permite reintentar desde el botón de la pantalla de espera)
+  // Función para verificar el estado en Firestore usando estrictamente 'status'
   const checkStoreStatus = useCallback(async () => {
     if (!storeId) return false;
     try {
@@ -33,7 +33,8 @@ export default function AppExpressLayout() {
       const storeSnap = await getDoc(storeRef);
       if (storeSnap.exists()) {
         const data = storeSnap.data();
-        const isActive = data.activo !== undefined ? data.activo : false;
+        // 🔴 Verificación estricta del campo unificado 'status'
+        const isActive = data.status === true;
         setStoreStatus(isActive);
         return isActive;
       } else {
@@ -88,7 +89,7 @@ export default function AppExpressLayout() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 flex flex-col relative antialiased selection:bg-green-600 selection:text-white">
       
-      {/* 🛑 BLOQUEO TOTAL: Si 'activo' es false, se muestra la pantalla de espera interactiva */}
+      {/* 🛑 BLOQUEO TOTAL: Si 'status' es false, se muestra la pantalla de espera interactiva */}
       {!storeStatus && (
         <SuspendedOverlay storeId={storeId} onCheckStatus={handleCheckStatusFromOverlay} />
       )}

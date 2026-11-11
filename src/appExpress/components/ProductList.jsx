@@ -50,7 +50,6 @@ export default function ProductList({ storeId, categoryId, categoryName }) {
     setLoading(true);
 
     try {
-      // Validación estricta del límite de productos en Firestore
       const storeRef = doc(db, 'comercios', storeId);
       const storeSnap = await getDoc(storeRef);
       const storeData = storeSnap.exists() ? storeSnap.data() : {};

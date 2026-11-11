@@ -27,7 +27,6 @@ export default function SettingsStore() {
     return () => unsubscribe();
   }, []);
 
-  // Cargar configuración del comercio desde la colección unificada 'comercios' y planes desde 'express_planes'
   useEffect(() => {
     if (!storeId) return;
     let isMounted = true;
@@ -44,9 +43,10 @@ export default function SettingsStore() {
             setStoreName(data.name || data.nombreLocal || '');
             setStorePhone(data.phone || data.whatsapp || '');
             setStoreAddress(data.address || '');
-            setStoreStatus(data.activo !== undefined ? data.activo : true);
+            // 🔴 Validamos estrictamente contra el campo 'status' unificado
+            setStoreStatus(data.status !== undefined ? data.status : true);
           }
-          planKey = data.plan || data.planSeleccionado || 'basico';
+          planKey = data.planId || data.planSeleccionado || data.plan || 'basico';
           if (planKey === 'plan_basico') planKey = 'basico';
           if (isMounted) setCurrentPlan(planKey);
         }
@@ -98,7 +98,6 @@ export default function SettingsStore() {
     }
   };
 
-  // Solicitar cambio de plan con validación anti-fraude (Downgrade)
   const handleChangePlan = async (selectedPlanId) => {
     const selectedPlanObj = allPlans.find((p) => p.id === selectedPlanId);
     if (!selectedPlanObj || !storeId) return;
@@ -118,7 +117,7 @@ export default function SettingsStore() {
       }
 
       const planName = selectedPlanObj.nombre || selectedPlanObj.name || selectedPlanId;
-      const adminPhone = "5491159781434"; // Tu número personal de WhatsApp
+      const adminPhone = "5491159781434";
 
       const message = `🔄 *SOLICITUD DE CAMBIO DE PLAN - VALHALLA EXPRESS*\n\n` +
         `🏪 *Comercio:* ${storeName}\n` +
@@ -152,7 +151,6 @@ export default function SettingsStore() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto text-gray-800">
       
-      {/* Cabecera y Banner ID */}
       <div className="bg-white border border-gray-200 p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2.5">
@@ -164,7 +162,6 @@ export default function SettingsStore() {
           </p>
         </div>
 
-        {/* ID de Comercio Compacto */}
         <div className="w-full sm:w-auto bg-gray-50 border border-gray-200 p-3 sm:px-4 sm:py-2.5 rounded-2xl flex items-center justify-between sm:justify-start gap-3">
           <div className="min-w-0 pr-1">
             <span className="text-[10px] text-gray-400 uppercase font-bold block">
@@ -186,7 +183,6 @@ export default function SettingsStore() {
         </div>
       </div>
 
-      {/* Banner de Confirmación */}
       {successMsg && (
         <div className="p-3.5 bg-green-50 border border-green-200 rounded-2xl text-green-800 text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-xs">
           <CheckCircle2 className="w-5 h-5 shrink-0 text-green-600" />
@@ -194,7 +190,6 @@ export default function SettingsStore() {
         </div>
       )}
 
-      {/* Alerta de Cuenta Suspendida */}
       {!storeStatus && (
         <div className="p-5 bg-red-50 border border-red-200 rounded-3xl space-y-3">
           <div className="flex items-center gap-2.5 text-red-700 font-bold text-sm">
@@ -216,7 +211,6 @@ export default function SettingsStore() {
         </div>
       )}
 
-      {/* Formulario: Datos Maestros del Negocio */}
       <div className="bg-white border border-gray-200 p-6 rounded-3xl space-y-4 shadow-sm">
         <h2 className="text-sm sm:text-base font-bold text-gray-900 pb-3 border-b border-gray-100">
           Datos Maestros del Negocio
@@ -279,14 +273,12 @@ export default function SettingsStore() {
         </form>
       </div>
 
-      {/* Estado de Suscripción y Cambio de Plan */}
       <div className="bg-white border border-gray-200 p-6 rounded-3xl space-y-5 shadow-sm">
         <h2 className="text-sm sm:text-base font-bold text-gray-900 pb-3 border-b border-gray-100 flex items-center gap-2">
           <Shield className="w-5 h-5 text-green-600" />
           <span>Suscripción y Cambio de Plan</span>
         </h2>
 
-        {/* Resumen del Plan Actual */}
         <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div className="space-y-1">
             <span className="text-[10px] uppercase font-bold text-green-700 bg-green-50 border border-green-200 px-2.5 py-0.5 rounded-full font-mono">
@@ -310,7 +302,6 @@ export default function SettingsStore() {
           </div>
         </div>
 
-        {/* Selector de Planes */}
         <div className="space-y-3 pt-1">
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
             <Zap className="w-4 h-4 text-amber-500" />

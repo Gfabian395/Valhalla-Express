@@ -13,17 +13,14 @@ export default function PublicCatalog() {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   
-  // Modal para peso
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [weightProduct, setWeightProduct] = useState(null);
   const [weightInput, setWeightInput] = useState('');
   const [weightUnit, setWeightUnit] = useState('grams');
 
-  // Datos para pedido
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
 
-  // 1. Cargar información del comercio desde la colección unificada 'comercios'
   useEffect(() => {
     if (!storeId) return;
     let isMounted = true;
@@ -51,7 +48,6 @@ export default function PublicCatalog() {
     };
   }, [storeId]);
 
-  // 2. Cargar categorías públicas desde 'comercios'
   useEffect(() => {
     if (!storeId) return;
     let isMounted = true;
@@ -77,7 +73,6 @@ export default function PublicCatalog() {
     };
   }, [storeId]);
 
-  // 3. Cargar productos de la categoría seleccionada desde 'comercios'
   useEffect(() => {
     if (!storeId || !selectedCategoryId) {
       setProducts([]);
@@ -151,7 +146,6 @@ export default function PublicCatalog() {
 
   const cartTotal = cart.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.qty || 0)), 0);
 
-  // Enviar pedido por WhatsApp sanitizado y codificado con el formato estructurado requerido
   const sendWhatsAppOrder = () => {
     if (cart.length === 0) {
       alert('Tu carrito está vacío.');
@@ -163,9 +157,9 @@ export default function PublicCatalog() {
     }
 
     const rawPhone = storeInfo.phone ? String(storeInfo.phone).replace(/\D/g, '') : '';
-    const phone = rawPhone || '5491159781434'; // Número de respaldo predeterminado
+    const phone = rawPhone || '5491159781434';
 
-    let message = `🚨 *NUEVO REGISTRO - VALHALLA EXPRESS*\n\n`;
+    let message = `🚨 *NUEVO PEDIDO - VALHALLA EXPRESS*\n\n`;
     message += `👤 *Cliente:* ${customerName.trim()}\n`;
     if (customerAddress.trim()) message += `📍 *Dirección:* ${customerAddress.trim()}\n`;
     message += `\n*Detalle del pedido:*\n`;
@@ -186,7 +180,6 @@ export default function PublicCatalog() {
     <div className="min-h-screen bg-gray-100 text-gray-800 p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         
-        {/* Banner Estilo Revista de Supermercado */}
         <div className="bg-linear-to-r from-green-700 to-green-600 text-white p-6 sm:p-8 rounded-3xl shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 text-center sm:text-left">
             <div className="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center text-white shrink-0 backdrop-blur-sm">
@@ -206,7 +199,6 @@ export default function PublicCatalog() {
           </div>
         </div>
 
-        {/* Categorías (Pestañas Revista) */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-gray-200">
           {categories.map(cat => (
             <button
@@ -226,7 +218,6 @@ export default function PublicCatalog() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* Grilla de Productos */}
           <div className="lg:col-span-8 space-y-3">
             <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide px-1">
               Góndola de Ofertas
@@ -291,7 +282,6 @@ export default function PublicCatalog() {
             )}
           </div>
 
-          {/* Carrito de Pedido */}
           <div className="lg:col-span-4 bg-white border border-gray-200 rounded-3xl p-5 flex flex-col justify-between space-y-4 shadow-sm lg:sticky lg:top-6">
             <div className="space-y-3.5">
               <div className="flex items-center justify-between pb-3 border-b border-gray-100">
@@ -347,7 +337,6 @@ export default function PublicCatalog() {
               )}
             </div>
 
-            {/* Formulario y Confirmación por WhatsApp */}
             <div className="space-y-3 pt-3 border-t border-gray-100">
               <div className="space-y-2">
                 <input
@@ -388,7 +377,6 @@ export default function PublicCatalog() {
         </div>
       </div>
 
-      {/* Modal para calcular peso en catálogo público */}
       {showWeightModal && weightProduct && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white border border-gray-200 text-gray-900 rounded-t-3xl sm:rounded-3xl p-6 max-w-sm w-full relative shadow-xl space-y-4">

@@ -20,7 +20,8 @@ export default function NavAdmin() {
         if (isMounted) {
           if (storeSnap.exists()) {
             const data = storeSnap.data();
-            setStoreName(data.name || data.nombreLocal || 'Mi Supermercado');
+            // 🔴 Compatible con 'name' unificado y nombres anteriores
+            setStoreName(data.name || data.nombreLocal || data.workshopName || 'Mi Supermercado');
           } else {
             setStoreName('Mi Supermercado');
           }

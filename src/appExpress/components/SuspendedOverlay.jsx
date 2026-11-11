@@ -2,7 +2,7 @@ import { RefreshCw, MessageSquare, Clock } from 'lucide-react';
 
 export default function SuspendedOverlay({ storeId, onCheckStatus }) {
   const handleWhatsAppSupport = () => {
-    const adminPhone = "5491159781434"; // Tu WhatsApp personal
+    const adminPhone = "5491159781434"; 
     const msg = `Hola! Ya realicé el registro de mi comercio en Valhalla Express (UID: ${storeId || 'N/A'}). ¿Podrías verificar el estado y activar la cuenta por favor?`;
     window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../../services/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, AlertCircle, Send, Zap, Check, Building2, MapPin, Phone } from 'lucide-react';
 
@@ -10,6 +10,7 @@ const ADMIN_WHATSAPP_NUMBER = '5491159781434';
 export default function LoginOnboarding() {
   const [user, setUser] = useState(null);
   const [storeName, setStoreName] = useState('');
+  const [ownerName, setOwnerName] = useState('');
   const [storePhone, setStorePhone] = useState('');
   const [storeAddress, setStoreAddress] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -42,16 +43,23 @@ export default function LoginOnboarding() {
       setLoading(true);
       setErrorMsg('');
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, provider);
       const loggedUser = result.user;
       setUser(loggedUser);
+      
+      // Prellenamos el nombre del titular con el de Google si está vacío
+      if (loggedUser.displayName && !ownerName) {
+        setOwnerName(loggedUser.displayName);
+      }
 
       const storeRef = doc(db, 'comercios', loggedUser.uid);
       const storeSnap = await getDoc(storeRef);
 
       if (storeSnap.exists()) {
         const data = storeSnap.data();
-        if (data.status === true || data.activo === true) {
+        // 🔴 Validamos estrictamente por status tal como en Service
+        if (data.status === true) {
           navigate('/express/pos');
         } else {
           setNeedsOnboarding(true);
@@ -78,8 +86,8 @@ export default function LoginOnboarding() {
 
   const handleRegisterStore = async (e) => {
     e.preventDefault();
-    if (!storeName.trim() || !user || !selectedPlan) {
-      setErrorMsg('Por favor, completa todos los campos y selecciona un plan.');
+    if (!storeName.trim() || !ownerName.trim() || !user || !selectedPlan) {
+      setErrorMsg('Por favor, completa todos los campos requeridos y selecciona un plan.');
       return;
     }
 
@@ -87,7 +95,6 @@ export default function LoginOnboarding() {
       setLoading(true);
       setErrorMsg('');
 
-      const slug = storeName.toLowerCase().replace(/[^a-z0-9]/g, '-');
       const formattedPhone = formatPhoneNumber(storePhone);
 
       const chosenPlanObj = plansList.find(p => p.id === selectedPlan);
@@ -95,35 +102,37 @@ export default function LoginOnboarding() {
       const planPrice = Number(chosenPlanObj?.precio || chosenPlanObj?.price || 0);
       const planMaintenance = Number(chosenPlanObj?.mantenimiento_mensual || 0);
 
+      // 🔴 Estructura unificada idéntica a Service (sin campo 'activo', usando 'status')[cite: 7]
       const initialStoreData = {
-        uid: user.uid,
+        ownerUid: user.uid,
         name: storeName.trim(),
+        ownerName: ownerName.trim(),
+        ownerEmail: user.email || '',
         phone: formattedPhone,
         address: storeAddress.trim() || '---',
-        slug: slug,
-        planSeleccionado: selectedPlan,
+        planId: selectedPlan,
         planName: planNameDisplay,
         planPrice: planPrice,
         planMaintenance: planMaintenance,
-        activo: false,
+        workshopConfigured: true,
         status: false,
-        createdAt: new Date().toISOString(),
-        ownerEmail: user.email,
-        ownerUid: user.uid
+        createdAt: serverTimestamp(),
       };
 
-      await setDoc(doc(db, 'comercios', user.uid), initialStoreData);
+      await setDoc(doc(db, 'comercios', user.uid), initialStoreData, { merge: true });
 
-      const message = `🚨 *NUEVO REGISTRO - VALHALLA EXPRESS*\n\n` +
+      const message = `🚨 *REGISTRO PENDIENTE DE PAGO - VALHALLA EXPRESS*\n\n` +
         `🏪 *Comercio:* ${storeName.trim()}\n` +
-        `📦 *Plan Solicitado:* ${planNameDisplay} ($${planPrice.toLocaleString('es-AR')} alta / $${planMaintenance.toLocaleString('es-AR')} mes)\n` +
-        `📍 *Dirección:* ${storeAddress.trim() || 'No especificada'}\n` +
-        `📱 *WhatsApp:* ${formattedPhone}\n` +
-        `🆔 *UID:* ${user.uid}\n\n` +
-        `_Solicito activación de cuenta._`;
+        `👤 *Titular:* ${ownerName.trim()}\n` +
+        `📱 *WhatsApp Local:* ${formattedPhone}\n` +
+        `💎 *Plan Elegido:* ${planNameDisplay}\n` +
+        `💵 *Pago Único de Alta:* $${planPrice.toLocaleString('es-AR')}\n` +
+        `🔄 *Mantenimiento Mensual:* $${planMaintenance.toLocaleString('es-AR')}\n` +
+        `🆔 *ID Comercio:* ${user.uid}\n\n` +
+        `El comercio ha completado su registro y aguarda validación para activar su cuenta.`;
 
       const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
 
       navigate('/express/pos');
     } catch (error) {
@@ -186,7 +195,7 @@ export default function LoginOnboarding() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Nombre del Comercio</label>
+                <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Nombre del Comercio *</label>
                 <div className="relative">
                   <Building2 className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
                   <input
@@ -201,7 +210,22 @@ export default function LoginOnboarding() {
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">WhatsApp de Contacto</label>
+                <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Nombre y Apellido del Titular *</label>
+                <div className="relative">
+                  <Building2 className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Ej: Fabián González"
+                    value={ownerName}
+                    onChange={e => setOwnerName(e.target.value)}
+                    required
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">WhatsApp de Contacto *</label>
                 <div className="relative">
                   <Phone className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
                   <input
@@ -209,23 +233,24 @@ export default function LoginOnboarding() {
                     placeholder="Ej: 1155443322"
                     value={storePhone}
                     onChange={e => setStorePhone(e.target.value)}
+                    required
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 font-mono focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 transition"
                   />
                 </div>
               </div>
-            </div>
 
-            <div>
-              <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Dirección / Localidad</label>
-              <div className="relative">
-                <MapPin className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Ej: Av. Mitre 2500"
-                  value={storeAddress}
-                  onChange={e => setStoreAddress(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 transition"
-                />
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Dirección / Localidad</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Ej: Av. Mitre 2500"
+                    value={storeAddress}
+                    onChange={e => setStoreAddress(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 transition"
+                  />
+                </div>
               </div>
             </div>
 
@@ -272,8 +297,11 @@ export default function LoginOnboarding() {
                           <span className="text-gray-600">Mantenimiento: ${planMaintenance.toLocaleString('es-AR')}/mes</span>
                         </div>
 
-                        <p className="text-[11px] text-gray-500 pt-1 border-t border-gray-200/60">
-                          Categorías: <strong className="text-gray-900">{maxCat}</strong> • Productos/Cat: <strong className="text-gray-900">{maxProd}</strong> <span className="text-green-600 font-bold">(Total: {totalProd})</span> • Clientes Fiados: <strong className="text-gray-900">{maxFiado}</strong>
+                        <p className="text-[11px] text-gray-500 pt-1 border-t border-gray-200/60 flex flex-wrap gap-x-3">
+                          <span>Categorías: <strong className="text-gray-900">{maxCat}</strong></span>
+                          <span>Productos/Cat: <strong className="text-gray-900">{maxProd}</strong></span>
+                          <span className="text-green-600 font-bold">(Total: {totalProd})</span>
+                          <span>Clientes Fiados: <strong className="text-gray-900">{maxFiado}</strong></span>
                         </p>
                       </div>
                     </div>
@@ -284,7 +312,7 @@ export default function LoginOnboarding() {
 
             <button
               type="submit"
-              disabled={loading || !storeName.trim() || !selectedPlan}
+              disabled={loading || !storeName.trim() || !ownerName.trim() || !selectedPlan}
               className="w-full py-3.5 px-4 bg-green-600 hover:bg-green-700 active:scale-95 disabled:opacity-40 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-sm cursor-pointer mt-2"
             >
               <Send className="w-4 h-4 shrink-0" />

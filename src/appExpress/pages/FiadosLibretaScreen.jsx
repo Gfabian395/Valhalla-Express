@@ -33,22 +33,39 @@ export default function FiadosLibretaScreen() {
       setErrorMsg('');
 
       try {
-        // 1. Obtener datos del comercio para conocer su planSeleccionado o planId
+        // 1. Obtener datos del comercio para conocer su plan (soporta planId unificado o variantes previas)
         const comercioRef = doc(db, 'comercios', user.uid);
         const comercioSnap = await getDoc(comercioRef);
-        let planId = 'Valhalla Express Pro'; // Plan por defecto
+        let planKey = 'basico'; // Plan por defecto seguro
 
         if (comercioSnap.exists()) {
           const comercioData = comercioSnap.data();
-          planId = comercioData.planSeleccionado || comercioData.planId || comercioData.plan || 'Valhalla Express Pro';
+          planKey = comercioData.planId || comercioData.planSeleccionado || comercioData.plan || 'basico';
+          if (typeof planKey === 'string') {
+            planKey = planKey.toLowerCase().replace('plan_', '').trim();
+          }
         }
 
         // 2. Consultar los límites en 'express_planes'
-        const planRef = doc(db, 'express_planes', planId);
-        const planSnap = await getDoc(planRef);
-        if (planSnap.exists()) {
+        let planRef = doc(db, 'express_planes', planKey);
+        let planSnap = await getDoc(planRef);
+
+        if (!planSnap.exists()) {
+          const allPlansSnap = await getDocs(collection(db, 'express_planes'));
+          if (!allPlansSnap.empty) {
+            const found = allPlansSnap.docs.find(d => d.id.toLowerCase().includes(planKey) || planKey.includes(d.id.toLowerCase()));
+            planSnap = found || allPlansSnap.docs[0];
+          }
+        }
+
+        if (planSnap && planSnap.exists()) {
           const planData = planSnap.data();
-          const limit = Number(planData.maxClientesFiado ?? planData.maximo_clientes ?? 300);
+          // 🔴 Robustez en la lectura del límite de clientes fiados
+          const limit = Number(
+            planData.maxClientesFiado ?? 
+            planData.maximo_clientes ?? 
+            planData.maxClients ?? 300
+          );
           if (isMounted) setMaxClientesLimit(limit);
         }
 
@@ -86,8 +103,8 @@ export default function FiadosLibretaScreen() {
     const nombreTrim = nuevoCliente.nombre.trim();
     if (!nombreTrim) return;
 
-    // Validar límite del plan
-    if (maxClientesLimit !== null && maxClientesLimit > 0 && clientesFiado.length >= maxClientesLimit) {
+    // Validar límite del plan (-1 significa ilimitado)
+    if (maxClientesLimit !== null && maxClientesLimit !== -1 && clientesFiado.length >= maxClientesLimit) {
       setErrorMsg(`Has alcanzado el límite de ${maxClientesLimit} clientes permitidos por tu plan actual.`);
       return;
     }
@@ -140,7 +157,7 @@ export default function FiadosLibretaScreen() {
   const clientesFiltrados = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return clientesFiado;
-    return clientesFiado.filter(c => 
+    return clientesFiltradosState = clientesFiado.filter(c => 
       (c.nombre || c.name || '').toLowerCase().includes(term) || 
       (c.telefono || '').includes(term)
     );
@@ -162,7 +179,7 @@ export default function FiadosLibretaScreen() {
               </h1>
               {/* 🏷️ Badge Contador de Clientes vs Límite del Plan */}
               <span className="text-xs font-bold bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full">
-                Clientes: <strong className="font-black">{clientesFiado.length}</strong> / {maxClientesLimit !== null ? maxClientesLimit : '...'}
+                Clientes: <strong className="font-black">{clientesFiado.length}</strong> / {maxClientesLimit !== null ? (maxClientesLimit === -1 ? '∞' : maxClientesLimit) : '...'}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-0.5">
